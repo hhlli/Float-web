@@ -80,7 +80,7 @@ const router = createRouter({
         {
           path: 'logs',
           name: 'AdminLogs',
-          component: () => import('../components/admin/logs/AdminLogs.vue'),
+          component: () => import('../components/admin/log-viewer/AdminLogs.vue'),
           meta: { title: '系统日志' }
         }, 
         {
