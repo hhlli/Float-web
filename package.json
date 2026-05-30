@@ -11,6 +11,7 @@
   "dependencies": {
     "@joakimono/echarts-extension-leaflet": "^1.1.0",
     "@vueuse/core": "^14.2.1",
+    "axios": "^1.16.1",
     "echarts": "^6.0.0",
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
