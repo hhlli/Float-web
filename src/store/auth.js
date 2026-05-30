@@ -1,20 +1,17 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue' // 🌟 必须引入 computed
 
 export const useAuthStore = defineStore('auth', () => {
-  // 初始值从 localStorage 获取，实现持久化
   const token = ref(localStorage.getItem('server_token') || '')
 
-  // 是否已登录
-  const isLoggedIn = () => !!token.value
+  // 🌟 修复：改为计算属性，确保组件能响应式侦听登录状态
+  const isLoggedIn = computed(() => !!token.value)
 
-  // 设置 Token
   const setToken = (newToken) => {
     token.value = newToken
     localStorage.setItem('server_token', newToken)
   }
 
-  // 退出登录
   const logout = () => {
     token.value = ''
     localStorage.removeItem('server_token')

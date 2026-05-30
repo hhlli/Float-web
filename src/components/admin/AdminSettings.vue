@@ -16,16 +16,18 @@
 
 <script setup>
 import { ref, computed, onMounted, markRaw } from 'vue'
-import { useRoute } from 'vue-router' // 🌟 引入路由工具
-import request from '../../utils/request.js' 
+import { useRoute } from 'vue-router'
+import request from '@/utils/request.js' 
+import { showToast } from '@/utils/toast.js'
+import SessionSettings from './settings/SessionSettings.vue'
 
 // 导入子组件
 import AccountSettings from './settings/AccountSettings.vue'
 import SiteConfig from './settings/SiteConfig.vue'
 import NotificationSettings from './settings/NotificationSettings.vue'
 import NotifyAlerts from './settings/NotificationRules.vue'
+import GeneralSettings from './settings/GeneralSettings.vue' 
 
-// 🌟 移除 props，改为从路由获取参数
 const route = useRoute()
 
 const isLoading = ref(true)
@@ -36,10 +38,11 @@ const componentsMap = {
   account: markRaw(AccountSettings),
   site: markRaw(SiteConfig),
   notification: markRaw(NotificationSettings),
-  notify: markRaw(NotifyAlerts)
+  notify: markRaw(NotifyAlerts),
+  general: markRaw(GeneralSettings), // 新增此行
+  session: markRaw(SessionSettings) // 新增此行
 }
 
-// 🌟 核心逻辑：监听 URL 中的 tab 参数来切换组件
 const activeComponent = computed(() => {
   const tab = route.query.tab
   return componentsMap[tab] || componentsMap['account']
@@ -52,7 +55,6 @@ const loadSettings = async () => {
   isLoading.value = true
   try {
     const data = await request.get('/api/admin/settings/get')
-    // 兼容可能存在的 data 包裹层级
     settingsData.value = data.data ? data.data : data
   } catch(e) { 
     console.error('加载设置失败:', e) 
@@ -65,27 +67,27 @@ const loadSettings = async () => {
  * 保存配置修改
  */
 const handleSave = async (payload) => {
-  // 合并当前缓存 + 新数据，直接发送，不硬编码字段白名单
   const safeData = {}
   const merged = { ...settingsData.value, ...payload }
 
-  // 对所有字段做类型安全转换
   for (const [k, v] of Object.entries(merged)) {
     if (v !== null && v !== undefined) {
       safeData[k] = String(v)
     }
   }
 
-  // 敏感字段不回写缓存（密码等）
   try {
     await request.post('/api/admin/settings/update', safeData)
     const newCache = { ...safeData }
     delete newCache.admin_password
     settingsData.value = newCache
-    alert('保存成功')
+    
+    // 使用全局统一提示
+    showToast('保存成功', 'success')
   } catch(e) {
     console.error('更新失败:', e)
-    alert('更新失败，详情请查看控制台日志')
+    // 使用全局统一提示
+    showToast('更新失败，详情请查看控制台日志', 'error')
   }
 }
 

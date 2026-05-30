@@ -2,7 +2,8 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import './assets/main.css'
+import './assets/base.css'
+import './themes/default/assets/main.css'
 
 // ECharts 核心注册
 import { use } from 'echarts/core'

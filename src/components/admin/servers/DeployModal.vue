@@ -17,7 +17,10 @@
               
               <div class="checkbox-grid">
                 <label class="checkbox-label">
-                  <input type="checkbox" v-model="opts.disableRpc"> 禁用远程控制
+                  <input type="checkbox" v-model="opts.disableRpc"> 禁用拨测任务
+                </label>
+                <label class="checkbox-label" style="color: var(--danger-color);">
+                  <input type="checkbox" v-model="opts.enableTerminal"> 开启 Web 终端
                 </label>
                 <label class="checkbox-label">
                   <input type="checkbox" v-model="opts.noUpdate"> 禁用自动更新
@@ -28,32 +31,38 @@
                 <label class="checkbox-label">
                   <input type="checkbox" v-model="opts.includeBuffer"> 包含缓冲区内存
                 </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="opts.enableDocker"> 开启 Docker 监控
+                </label>
+                <label class="checkbox-label" v-if="opts.enableDocker">
+                  <input type="checkbox" v-model="opts.enableDockerStats"> 采集容器资源
+                </label>
               </div>
 
               <div class="input-grid">
                 <div class="input-group">
                   <label>GitHub 代理</label>
-                  <input type="text" v-model="opts.ghProxy" placeholder="例如: https://ghproxy.com/">
+                  <input type="text" class="form-control" v-model="opts.ghProxy" placeholder="例如: https://ghproxy.com/">
                 </div>
                 <div class="input-group">
                   <label>安装目录</label>
-                  <input type="text" v-model="opts.installDir" placeholder="默认: /usr/local/bin">
+                  <input type="text" class="form-control" v-model="opts.installDir" :placeholder="os === 'windows' ? '默认: C:\\Program Files\\FloatAgent' : '默认: /usr/local/bin'">
                 </div>
                 <div class="input-group">
                   <label>服务名称</label>
-                  <input type="text" v-model="opts.serviceName" placeholder="默认: go-probe">
+                  <input type="text" class="form-control" v-model="opts.serviceName" placeholder="默认: float-agent">
                 </div>
                 <div class="input-group">
                   <label>只监测特定网卡</label>
-                  <input type="text" v-model="opts.netInclude" placeholder="例如: eth0,eth1">
+                  <input type="text" class="form-control" v-model="opts.netInclude" placeholder="例如: eth0,eth1">
                 </div>
                 <div class="input-group">
                   <label>排除特定网卡</label>
-                  <input type="text" v-model="opts.netExclude" placeholder="例如: docker0,veth">
+                  <input type="text" class="form-control" v-model="opts.netExclude" placeholder="例如: docker0,veth">
                 </div>
                 <div class="input-group">
                   <label>只监测特定挂载点</label>
-                  <input type="text" v-model="opts.diskMounts" placeholder="例如: /,/data">
+                  <input type="text" class="form-control" v-model="opts.diskMounts" :placeholder="os === 'windows' ? '例如: C:,D:' : '例如: /,/data'">
                 </div>
               </div>
             </div>
@@ -78,7 +87,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import request from '../../../utils/request.js'
+import request from '@/utils/request.js'
+import { showToast } from '@/utils/toast.js'
 
 defineEmits(['close'])
 
@@ -91,15 +101,16 @@ const copySuccess = ref(false)
 const remoteAgentUrl = ref('')
 const remoteToken = ref('')
 
-// 当前选中的系统
 const os = ref('linux')
 
-// 🌟 选项状态绑定
 const opts = ref({
   disableRpc: false,
+  enableTerminal: false,
   insecure: false,
   noUpdate: false,
   includeBuffer: false,
+  enableDocker: false, 
+  enableDockerStats: false, 
   ghProxy: '',
   installDir: '',
   serviceName: '',
@@ -124,7 +135,6 @@ const fetchSettings = async () => {
 watch(() => props.show, (newVal) => {
   if (newVal) {
     fetchSettings()
-    // 每次打开弹窗时，重置为默认的 Linux 选项
     os.value = 'linux'
   }
 })
@@ -133,24 +143,31 @@ onMounted(() => {
   fetchSettings()
 })
 
-// 🌟 核心修改：动态拼接参数
-// 核心修改：动态拼接参数支持三端系统
 const deployCmd = computed(() => {
   let hostStr = remoteAgentUrl.value || window.location.host
   if (hostStr.includes('5173')) {
     hostStr = hostStr.replace('5173', '8080')
   }
 
-  const protocol = remoteAgentUrl.value.startsWith('https') ? 'https' : 'http'
+  const protocol = remoteAgentUrl.value 
+    ? (remoteAgentUrl.value.startsWith('https') ? 'https' : 'http') 
+    : window.location.protocol.replace(':', '')
+
   const cleanHost = hostStr.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const currentToken = remoteToken.value || localStorage.getItem('server_token') || 'your-token'
+  const currentToken = props.serverData?.auth_token || 'TOKEN_ERROR'
   
-  // 1. 组装 Bash 语法标志位 (Linux & macOS 共用)
   let bashFlags = ''
   if (opts.value.disableRpc) bashFlags += ` --disable-rpc`
+  if (opts.value.enableTerminal) bashFlags += ` --enable-terminal`
   if (opts.value.insecure) bashFlags += ` --insecure`
   if (opts.value.noUpdate) bashFlags += ` --no-update`
   if (opts.value.includeBuffer) bashFlags += ` --include-buffer`
+  if (opts.value.enableDocker) {
+    bashFlags += ` --docker`
+    if (opts.value.enableDockerStats) {
+      bashFlags += ` --docker-stats`
+    }
+  }
   if (opts.value.ghProxy) bashFlags += ` --gh-proxy "${opts.value.ghProxy}"`
   if (opts.value.installDir) bashFlags += ` --dir "${opts.value.installDir}"`
   if (opts.value.serviceName) bashFlags += ` --service-name "${opts.value.serviceName}"`
@@ -163,7 +180,6 @@ const deployCmd = computed(() => {
     bashNodeId = ` -id "${props.serverData.node_id}"`
   }
 
-  // 2. 根据系统类型输出最终命令
   if (os.value === 'linux') {
     return `curl -fsSL ${protocol}://${cleanHost}/install.sh -o install.sh && bash install.sh -t "${currentToken}" -s "${protocol}://${cleanHost}"${bashNodeId}${bashFlags}`
   } 
@@ -173,142 +189,55 @@ const deployCmd = computed(() => {
   } 
   
   if (os.value === 'windows') {
-    // 组装 PowerShell 语法标志位
     let psFlags = ''
     if (props.serverData && props.serverData.node_id) psFlags += ` -NodeId "${props.serverData.node_id}"`
     if (opts.value.disableRpc) psFlags += ` -DisableRpc`
+    if (opts.value.enableTerminal) psFlags += ` -EnableTerminal`
     if (opts.value.insecure) psFlags += ` -Insecure`
     if (opts.value.noUpdate) psFlags += ` -NoUpdate`
     if (opts.value.includeBuffer) psFlags += ` -IncludeBuffer`
+    if (opts.value.enableDocker) {
+      psFlags += ` -EnableDocker`
+      if (opts.value.enableDockerStats) {
+        psFlags += ` -EnableDockerStats`
+      }
+    }
+    // 🌟 修复：追加了针对 Windows 的 GitHub 代理启动参数
+    if (opts.value.ghProxy) psFlags += ` -GhProxy "${opts.value.ghProxy}"`
     if (opts.value.installDir) psFlags += ` -InstallDir "${opts.value.installDir}"`
     if (opts.value.serviceName) psFlags += ` -ServiceName "${opts.value.serviceName}"`
+    if (opts.value.netInclude) psFlags += ` -NetInclude "${opts.value.netInclude}"`
+    if (opts.value.netExclude) psFlags += ` -NetExclude "${opts.value.netExclude}"`
+    if (opts.value.diskMounts) psFlags += ` -DiskMounts "${opts.value.diskMounts}"`
     
     return `Invoke-WebRequest -Uri "${protocol}://${cleanHost}/install.ps1" -OutFile "install.ps1"; .\\install.ps1 -Token "${currentToken}" -Server "${protocol}://${cleanHost}"${psFlags}`
   }
 })
 
 const copyCommand = async () => {
-  // 移除对 os.value !== 'linux' 的 return 拦截
   try {
     await navigator.clipboard.writeText(deployCmd.value)
     copySuccess.value = true
     setTimeout(() => { copySuccess.value = false }, 2000)
   } catch (err) {
-    alert("复制失败，请手动选择代码复制")
+    showToast("复制失败，请手动选择代码复制", "error")
   }
 }
 </script>
 
 <style scoped>
-/* 适度加宽弹窗以容纳两列布局 */
-.modal-card.custom-width {
-  width: 90%;
-  max-width: 640px; 
-}
-
-/* 操作系统 Tabs */
-.os-tabs {
-  display: flex;
-  background: var(--bg-color, #f1f5f9);
-  border-radius: 8px;
-  padding: 4px;
-  margin-bottom: 24px;
-}
-.os-tab {
-  flex: 1;
-  text-align: center;
-  padding: 8px 0;
-  font-size: 14px;
-  color: var(--text-muted, #94a3b8);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-.os-tab.active {
-  background: var(--surface-color, #ffffff);
-  color: var(--text-main, #1e293b);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  font-weight: 500;
-}
-
-/* 选项区域标题 */
-.section-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
-}
-
-/* 复选框网格 (两列) */
-.checkbox-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-main);
-  cursor: pointer;
-  user-select: none;
-}
-.checkbox-label input[type="checkbox"] {
-  accent-color: var(--primary-color, #3b82f6);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-/* 输入框网格 (两列) */
-.input-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.input-group label {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.input-group input {
-  padding: 8px 12px;
-  font-size: 13px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color, #e2e8f0);
-  background: var(--bg-color, #f8fafc);
-  color: var(--text-main, #1e293b);
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.input-group input:focus {
-  border-color: var(--primary-color, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-/* 命令输出框 */
-.cmd-box { 
-  background: var(--bg-color, #f8fafc); 
-  border-radius: 8px; 
-  padding: 16px; 
-  overflow-x: auto; 
-  border: 1px solid var(--border-color, #e2e8f0); 
-}
-.cmd-box code { 
-  color: var(--primary-color, #3b82f6); 
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
-  font-size: 13px; 
-  line-height: 1.5; 
-  white-space: pre-wrap; 
-  word-break: break-all; 
-}
+/* 样式部分保持不变 */
+.modal-card.custom-width { width: 90%; max-width: 640px; }
+.os-tabs { display: flex; background: var(--bg-color); border-radius: 8px; padding: 4px; margin-bottom: 24px; }
+.os-tab { flex: 1; text-align: center; padding: 8px 0; font-size: 14px; color: var(--text-muted); cursor: pointer; border-radius: 6px; transition: all 0.2s ease; }
+.os-tab.active { background: var(--surface-color); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: 500; }
+.section-title { font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+.checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main); cursor: pointer; user-select: none; }
+.checkbox-label input[type="checkbox"] { accent-color: var(--primary-color); width: 16px; height: 16px; cursor: pointer; }
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-group label { font-size: 12px; color: var(--text-muted); }
+.cmd-box { background: var(--bg-color); border-radius: 8px; padding: 16px; overflow-x: auto; border: 1px solid var(--border-color); }
+.cmd-box code { color: var(--primary-color); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
 </style>

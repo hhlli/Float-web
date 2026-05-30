@@ -9,12 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@joakimono/echarts-extension-leaflet": "^1.1.0",
     "@vueuse/core": "^14.2.1",
     "echarts": "^6.0.0",
     "pinia": "^3.0.4",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.32",
     "vue-echarts": "^8.0.1",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",

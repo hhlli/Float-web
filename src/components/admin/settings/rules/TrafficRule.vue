@@ -1,12 +1,11 @@
 <template>
   <div class="rule-section">
-    
-    <div class="form-row" style="display: flex; align-items: flex-start; justify-content: flex-start; gap: 32px; margin-bottom: 24px;">
-      <div class="form-group" style="margin-bottom: 0;">
-        <label style="display: block; font-size: 14px; font-weight: bold; margin-bottom: 12px; color: var(--text-main);">全局流量通知</label>
-        <div style="display: flex; gap: 10px; align-items: center; height: 36px;">
+    <div class="form-row rule-settings-row">
+      <div class="form-group toggle-group">
+        <label>全局流量通知</label>
+        <div class="toggle-wrapper">
           <BaseToggle v-model="trafficRule.enabled" />
-          <span style="font-size: 14px; color: var(--text-main);">{{ trafficRule.enabled ? '已启用流量通知' : '已关闭流量通知' }}</span>
+          <span class="toggle-label">{{ trafficRule.enabled ? '已启用流量通知' : '已关闭流量通知' }}</span>
         </div>
       </div>
       
@@ -20,7 +19,7 @@
           <span class="status-dot" :class="isOnline(s) ? 'online' : 'offline'"></span>
           <span class="server-name" :title="s.name || s.node_id">{{ s.name || s.node_id }}</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
+        <div class="override-input-group">
           <input 
             type="number" 
             class="small-input"
@@ -34,58 +33,61 @@
       </div>
     </div>
 
-    <div class="action-row" style="margin-top: 24px;">
+    <div class="action-row">
       <BaseSaveButton :loading="isSaving" @click="saveData" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import BaseToggle from '../../../common/BaseToggle.vue'
-import BaseNumberGroup from '../../../common/BaseNumberGroup.vue'
-import BaseSaveButton from '../../../common/BaseSaveButton.vue'
+import { ref, computed, onMounted } from 'vue'
+import request from '@/utils/request.js'
+import { showToast } from '@/utils/toast.js'
+import { useServerStore } from '@/store/server.js' // 🌟 引入 Store
+import BaseToggle from '@/components/common/BaseToggle.vue'
+import BaseNumberGroup from '@/components/common/BaseNumberGroup.vue'
+import BaseSaveButton from '@/components/common/BaseSaveButton.vue'
 
-const token = localStorage.getItem('server_token')
+const serverStore = useServerStore()
+// 🌟 统一数据流
+const servers = computed(() => serverStore.servers)
+
 const isSaving = ref(false)
-const servers = ref([])
 const trafficRule = ref({ enabled: false, default_threshold: 80, overrides: {} })
 
 const isOnline = (s) => s.last_active && (Date.now() / 1000 - s.last_active) < 60
 
-const fetchServers = async () => {
-  try {
-    const res = await fetch('/api/admin/servers', { headers: { 'Authorization': 'Bearer ' + token } })
-    if (res.ok) servers.value = await res.json()
-  } catch (e) { console.error(e) }
-}
-
 const fetchSettings = async () => {
   try {
-    const res = await fetch('/api/admin/settings/get', { headers: { 'Authorization': 'Bearer ' + token } })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.traffic_rule) {
-        try { 
-          const parsed = JSON.parse(data.traffic_rule)
-          trafficRule.value = {
-            enabled: parsed.enabled || false,
-            default_threshold: parsed.default_threshold || parsed.threshold || 80,
-            overrides: parsed.overrides || {}
-          }
-        } catch {}
-      }
+    const data = await request.get('/api/admin/settings/get')
+    if (data && data.traffic_rule) {
+      try { 
+        const parsed = JSON.parse(data.traffic_rule)
+        trafficRule.value = {
+          enabled: parsed.enabled || false,
+          default_threshold: parsed.default_threshold || parsed.threshold || 80,
+          overrides: parsed.overrides || {}
+        }
+      } catch {}
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 const saveData = async () => {
   isSaving.value = true
   
+  // 🌟 自清洗逻辑
+  const validIds = new Set(servers.value.map(s => s.node_id))
   const cleanOverrides = {}
+  
   for (const key in trafficRule.value.overrides) {
     const val = trafficRule.value.overrides[key]
-    if (val !== '' && val !== null && val !== undefined) cleanOverrides[key] = Number(val)
+    // 过滤掉不在列表里的幽灵 ID
+    if (validIds.has(key) && val !== '' && val !== null && val !== undefined) {
+      cleanOverrides[key] = Number(val)
+    }
   }
   
   const payload = {
@@ -95,41 +97,52 @@ const saveData = async () => {
   }
 
   try {
-    const res = await fetch('/api/admin/settings/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ traffic_rule: JSON.stringify(payload) })
+    await request.post('/api/admin/settings/update', { 
+      traffic_rule: JSON.stringify(payload) 
     })
-    if (res.ok) {
-      alert('保存成功')
-      await fetchSettings()
-    } else { alert('保存失败') }
-  } catch (e) { alert('请求出错') }
-  isSaving.value = false
+    showToast('保存成功', 'success')
+    await fetchSettings()
+  } catch (e) {
+    showToast('保存失败', 'error')
+    console.error(e)
+  } finally {
+    isSaving.value = false
+  }
 }
 
 onMounted(async () => {
   await fetchSettings()
-  await fetchServers()
 })
 </script>
 
 <style scoped>
-.rule-tip { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; padding: 10px 14px; background: var(--card-bg-secondary, rgba(255,255,255,0.03)); border-radius: 8px; border-left: 3px solid var(--accent, #7c6af7); }
+.rule-settings-row { display: flex; align-items: flex-start; gap: 32px; margin-bottom: 24px; }
+.toggle-group { margin-bottom: 0; }
+.toggle-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-main); }
+.toggle-wrapper { display: flex; gap: 10px; align-items: center; height: 36px; }
+.toggle-label { font-size: 14px; color: var(--text-main); }
 
-.server-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.server-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
 .empty-tip { color: var(--text-muted); font-size: 14px; padding: 20px 0; grid-column: 1 / -1; text-align: center; }
-.server-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 8px; background: var(--card-bg-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #3a3a4a); overflow: hidden; }
+.server-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 8px; background: var(--surface-color); border: 1px solid var(--border-color); overflow: hidden; transition: border-color 0.2s; }
+.server-row:hover { border-color: var(--primary-color); }
 .server-info { display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.status-dot.online { background: #2ecc71; }
-.status-dot.offline { background: var(--danger, #e74c3c); }
+.status-dot.online { background: #10b981; }
+.status-dot.offline { background: #ef4444; }
 .server-name { font-size: 14px; color: var(--text-main); text-overflow: ellipsis; overflow: hidden; }
-.text-muted { color: var(--text-muted); }
 
-.small-input { width: 68px; padding: 4px 6px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-color, #3a3a4a); background: transparent; color: var(--text-main); text-align: center; outline: none; transition: border-color 0.2s; }
-.small-input:focus { border-color: var(--accent, #7c6af7); }
+.override-input-group { display: flex; align-items: center; gap: 6px; }
+.text-muted { color: var(--text-muted); }
+.small-input { width: 68px; padding: 4px 6px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); text-align: center; outline: none; transition: border-color 0.2s; }
+.small-input:focus { border-color: var(--primary-color); }
 .small-input::placeholder { color: var(--text-muted); opacity: 0.6; }
 .small-input::-webkit-outer-spin-button, .small-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .small-input[type=number] { -moz-appearance: textfield; }
+
+.action-row {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
 </style>

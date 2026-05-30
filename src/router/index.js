@@ -1,4 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useSiteStore } from '@/store/site'
+
+// 1. 分类预加载所有主题的视图文件映射
+const themeViews = {
+  PublicView: import.meta.glob('../themes/*/views/PublicView.vue'),
+  ServerDetailView: import.meta.glob('../themes/*/views/ServerDetailView.vue')
+}
+
+const getThemeView = async (viewType) => {
+  const store = useSiteStore()
+  await store.fetchSettings()
+  
+  const theme = store.theme || 'default'
+  const path = `../themes/${theme}/views/${viewType}.vue`
+  const viewsMap = themeViews[viewType]
+  
+  // 命中对应主题组件
+  if (viewsMap && viewsMap[path]) {
+    return viewsMap[path]()
+  }
+  
+  // 修正后的降级回退机制：从各自的映射表中获取 default 组件
+  if (viewsMap && viewsMap[`../themes/default/views/${viewType}.vue`]) {
+    return viewsMap[`../themes/default/views/${viewType}.vue`]()
+  }
+
+  throw new Error(`Component ${viewType} not found in theme ${theme} or default.`)
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -6,36 +34,42 @@ const router = createRouter({
     {
       path: '/',
       name: 'Public',
-      component: () => import('../views/PublicView.vue')
+      component: () => getThemeView('PublicView')
     },
-    // 🌟 新增：独立服务器详情页路由
     {
       path: '/server/:id',
       name: 'ServerDetail',
-      component: () => import('../views/ServerDetailView.vue')
+      component: () => getThemeView('ServerDetailView')
     },
-
+    {
+      path: '/oauth/callback',
+      name: 'OAuthCallback',
+      component: () => import('../views/OAuthCallback.vue')
+    },
     {
       path: '/admin',
       name: 'Admin',
       component: () => import('../views/AdminView.vue'),
       meta: { requiresAuth: true },
-      // 🌟 新增：访问 /admin 时，默认重定向到服务器列表
       redirect: '/admin/servers', 
-      // 🌟 新增：嵌套子路由
-      // 🌟 新增：嵌套子路由
       children: [
         {
           path: 'servers', 
           name: 'AdminServers',
           component: () => import('../components/admin/servers/AdminServers.vue'),
-          meta: { title: '服务器' } // 🌟 新增标题元数据
+          meta: { title: '服务器' }
         },
         {
           path: 'settings', 
           name: 'AdminSettings',
           component: () => import('../components/admin/AdminSettings.vue'),
           meta: { title: '系统设置' }
+        },
+        {
+          path: 'theme', 
+          name: 'AdminTheme',
+          component: () => import('../components/admin/AdminTheme.vue'),
+          meta: { title: '主题外观' }
         },
         {
           path: 'latency',
@@ -66,15 +100,10 @@ const router = createRouter({
   ]
 })
 
-// 路由守卫保持你原来完美的逻辑，完全不变
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('server_token')
-  
   if (to.meta.requiresAuth && !token) {
-    console.log('路由拦截：无 token 访问 admin')
     next('/')
-  } else if (to.path === '/' && token) {
-    next('/admin')
   } else {
     next()
   }

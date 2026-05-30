@@ -40,7 +40,6 @@ const props = defineProps({
   options: {
     type: Array,
     required: true,
-    // 每项结构：{ value: string, label: string, desc?: string }
   },
   placeholder: { type: String, default: '请选择' },
 })
@@ -68,23 +67,23 @@ const select = (val) => {
 .select-trigger {
   display: flex; align-items: center; gap: 7px;
   padding: 6px 12px; border-radius: 8px;
-  border: 1px solid var(--border-color, #e2e8f0);
-  background: var(--surface-color, #fff);
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
   font-size: 13px; font-weight: 500;
-  color: var(--text-main, #1e293b);
+  color: var(--text-main);
   cursor: pointer;
   white-space: nowrap;
   transition: border-color 0.15s;
 }
-.select-trigger:hover { border-color: var(--primary-color, #3b82f6); }
+.select-trigger:hover { border-color: var(--primary-color); }
 
-.chevron { color: #94a3b8; transition: transform 0.2s; flex-shrink: 0; }
+.chevron { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
 .chevron.open { transform: rotate(180deg); }
 
 .select-dropdown {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
-  background: var(--surface-color, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.1);
   min-width: 200px;
@@ -99,13 +98,13 @@ const select = (val) => {
   background: transparent; text-align: left; cursor: pointer;
   transition: background 0.12s;
 }
-.select-option:hover  { background: #f8fafc; }
+.select-option:hover  { background: var(--bg-color); }
 .select-option.active { background: rgba(59,130,246,0.07); }
 
 .option-main  { display: flex; justify-content: space-between; align-items: center; }
-.option-label { font-size: 13px; font-weight: 500; color: var(--text-main, #1e293b); }
-.option-desc  { font-size: 12px; color: var(--text-muted, #94a3b8); }
-.check        { color: var(--primary-color, #3b82f6); flex-shrink: 0; }
+.option-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
+.option-desc  { font-size: 12px; color: var(--text-muted); }
+.check        { color: var(--primary-color); flex-shrink: 0; }
 
 .dropdown-enter-active, .dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px); }

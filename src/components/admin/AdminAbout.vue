@@ -7,7 +7,7 @@
         <line x1="12" y1="8" x2="12.01" y2="8"></line>
       </svg>
       <h2>关于系统</h2>
-      <p style="margin-top: 8px;">Monitor Agent v1.0.0 | 基于 MIT 协议</p>
+      <p style="margin-top: 8px;">Float Agent v1.0.0 | 基于 MIT 协议</p>
     </div>
   </div>
 </template>

@@ -6,8 +6,8 @@
       </button>
       <span class="header-text">Float</span>
       <span class="version-tag" v-show="!isCollapsed && siteSettings?.server_version">
-    {{ siteSettings.server_version }}
-  </span>
+        {{ siteSettings.server_version }}
+      </span>
     </div>
     <nav class="sidebar-nav">
       <div :class="['nav-item', { active: route.path.includes('/admin/servers') }]" @click="goTo('/admin/servers')" title="服务器">
@@ -16,15 +16,19 @@
       </div>
 
       <div class="nav-item-group">
-        <div class="nav-item" @click="isNotifyOpen = !isNotifyOpen" title="通知">
+        <div class="nav-item" @click="toggleGroup('notify')" title="通知">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
           <span class="nav-text">通知</span>
           <svg v-if="!isCollapsed" class="chevron" :class="{ open: isNotifyOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-        <div class="sub-nav" v-show="isNotifyOpen && !isCollapsed">
-          <div :class="['nav-item-sub', { active: route.query.tab === 'notification' }]" @click="goTo('/admin/settings', 'notification')">通知设置</div>
-          <div :class="['nav-item-sub', { active: route.query.tab === 'notify' }]" @click="goTo('/admin/settings', 'notify')">通知规则</div>
-        </div>
+        <Transition name="expand">
+          <div class="sub-nav-grid" v-show="isNotifyOpen && !isCollapsed">
+            <div class="sub-nav">
+              <div :class="['nav-item-sub', { active: route.query.tab === 'notification' }]" @click="goTo('/admin/settings', 'notification')">通知设置</div>
+              <div :class="['nav-item-sub', { active: route.query.tab === 'notify' }]" @click="goTo('/admin/settings', 'notify')">通知规则</div>
+            </div>
+          </div>
+        </Transition>
       </div>
 
       <div :class="['nav-item', { active: route.path.includes('/admin/latency') }]" @click="goTo('/admin/latency')" title="延迟监测">
@@ -33,15 +37,32 @@
       </div>
 
       <div class="nav-item-group">
-        <div class="nav-item" @click="isSettingsOpen = !isSettingsOpen" title="系统设置">
+        <div class="nav-item" @click="toggleGroup('settings')" title="系统设置">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span class="nav-text">系统设置</span>
           <svg v-if="!isCollapsed" class="chevron" :class="{ open: isSettingsOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
-        <div class="sub-nav" v-show="isSettingsOpen && !isCollapsed">
-          <div :class="['nav-item-sub', { active: route.query.tab === 'account' }]" @click="goTo('/admin/settings', 'account')">账户设置</div>
-          <div :class="['nav-item-sub', { active: route.query.tab === 'site' }]" @click="goTo('/admin/settings', 'site')">站点配置</div>
-        </div>
+        <Transition name="expand">
+          <div class="sub-nav-grid" v-show="isSettingsOpen && !isCollapsed">
+            <div class="sub-nav">
+              <div :class="['nav-item-sub', { active: route.query.tab === 'account' }]" @click="goTo('/admin/settings', 'account')">账户设置</div>
+              <div :class="['nav-item-sub', { active: route.query.tab === 'site' }]" @click="goTo('/admin/settings', 'site')">站点配置</div>
+              <div :class="['nav-item-sub', { active: route.query.tab === 'general' }]" @click="goTo('/admin/settings', 'general')">通用设置</div>
+              <div :class="['nav-item-sub', { active: route.query.tab === 'session' }]" @click="goTo('/admin/settings', 'session')">会话管理</div>
+            </div>
+          </div>
+        </Transition>
+      </div>
+      
+      <div :class="['nav-item', { active: route.path.includes('/admin/theme') }]" @click="goTo('/admin/theme')" title="主题外观">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="13.5" cy="6.5" r=".5"></circle>
+          <circle cx="17.5" cy="10.5" r=".5"></circle>
+          <circle cx="8.5" cy="7.5" r=".5"></circle>
+          <circle cx="6.5" cy="12.5" r=".5"></circle>
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+        </svg>
+        <span class="nav-text">主题外观</span>
       </div>
       
       <div :class="['nav-item', { active: route.path.includes('/admin/logs') }]" @click="goTo('/admin/logs')" title="系统日志">
@@ -75,28 +96,44 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-// 🌟 1. 引入网络请求工具 (注意相对路径，根据你的目录结构向上找 utils 文件夹)
-import request from '../../../utils/request.js'
+import request from '@/utils/request.js'
+import { useAuthStore } from '@/store/auth.js'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
-const isCollapsed = ref(false)
+// 1. 记录初始的屏幕状态 (是否为移动端/窄屏)
+let wasMobile = window.innerWidth <= 768
+
+// 初始化折叠状态
+const isCollapsed = ref(wasMobile)
 const isSettingsOpen = ref(false)
 const isNotifyOpen = ref(false)
 
-// 🌟 2. 声明一个响应式变量，用来保存从后端获取的配置（包含 server_version）
 const siteSettings = ref({})
 
-// 🌟 3. 将 onMounted 改为 async 异步函数，以便在组件加载时请求数据
+// 2. 修改 resize 逻辑，仅在跨越断点时改变状态，避免持续触发
+const handleResize = () => {
+  const isMobile = window.innerWidth <= 768
+  if (isMobile && !wasMobile) {
+    // 从宽屏缩小为窄屏时，自动收起
+    isCollapsed.value = true
+  } else if (!isMobile && wasMobile) {
+    // 从窄屏放大为宽屏时，自动展开
+    isCollapsed.value = false
+  }
+  wasMobile = isMobile
+}
+
 onMounted(async () => {
-  // 原有的展开逻辑
-  if (['account', 'site'].includes(route.query.tab)) isSettingsOpen.value = true
+  window.addEventListener('resize', handleResize)
+
+  if (['account', 'site', 'general'].includes(route.query.tab)) isSettingsOpen.value = true
   if (['notification', 'notify'].includes(route.query.tab)) isNotifyOpen.value = true
 
-  // 🌟 4. 请求后端公开配置接口，赋值给 siteSettings
   try {
     const res = await request.get('/api/public/settings')
     if (res) {
@@ -107,26 +144,40 @@ onMounted(async () => {
   }
 })
 
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
+
 const goTo = (path, subTab = null) => {
   if (subTab) {
     router.push({ path, query: { tab: subTab } })
   } else {
     router.push(path)
   }
+  // 窄屏状态下，点击菜单跳转后自动收起侧边栏
+  if (window.innerWidth <= 768) {
+    isCollapsed.value = true
+  }
+}
+
+const toggleGroup = (groupName) => {
+  const targetRef = groupName === 'notify' ? isNotifyOpen : isSettingsOpen
+  if (isCollapsed.value) {
+    isCollapsed.value = false
+    targetRef.value = true
+  } else {
+    targetRef.value = !targetRef.value
+  }
 }
 
 const handleLogout = () => {
-  localStorage.removeItem('server_token')
+  authStore.logout()
   router.push('/')
 }
 </script>
 
 <style scoped>
-
 .sidebar-header {
-  display: flex;
-  align-items: center; /* 修复图标与 Float 文字的垂直居中 */
-  gap: 6px;
   white-space: nowrap;
 }
 
@@ -137,16 +188,15 @@ const handleLogout = () => {
 
 .version-tag {
   font-size: 12px;
-  font-weight: 300;       /* 核心：设置最细字重 */
-  color: #94a3b8;
-  margin-top: 2px; /* 在 center 对齐下进行微调，使其视觉上贴近基线 */
+  font-weight: 300;
+  color: var(--text-muted); 
+  margin-top: 2px;
 }
 
 .sidebar {
-  width: 220px;
-  min-width: 220px;
   transition: width 0.25s ease, min-width 0.25s ease;
-  overflow: hidden;
+  width: 220px; 
+  min-width: 220px;
 }
 
 .sidebar.collapsed {
@@ -154,21 +204,17 @@ const handleLogout = () => {
   min-width: 56px;
 }
 
-/* 折叠时隐藏文字 */
 .sidebar.collapsed .header-text,
-.sidebar.collapsed .nav-text {
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .version-tag {
   display: none;
 }
 
-/* 折叠时图标居中 */
-.sidebar.collapsed .nav-item {
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .sidebar-header {
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
-}
-
-.sidebar.collapsed .sidebar-header {
-  justify-content: center;
 }
 
 .collapse-btn {
@@ -184,8 +230,44 @@ const handleLogout = () => {
   color: inherit;
   flex-shrink: 0;
   padding: 0;
+  transition: background-color 0.2s;
 }
+
 .collapse-btn:hover {
-  background: var(--hover-bg, rgba(0,0,0,0.06));
+  background: var(--border-color); 
 }
+
+/* 二级菜单展开/收起过渡动画 (Grid方案) */
+.expand-enter-active,
+.expand-leave-active {
+  transition: grid-template-rows 0.2s ease-out, opacity 0.2s ease-out;
+  display: grid;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sub-nav {
+  min-height: 0; 
+  margin-top: 0; 
+  margin-bottom: 0;
+}
+
+/* 追加在 style 标签最底部 */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+}
+
 </style>

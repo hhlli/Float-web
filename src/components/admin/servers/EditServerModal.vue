@@ -23,6 +23,14 @@
                   <option value="EUR">EUR (€)</option>
                 </select>
               </div>
+              <div class="form-group" style="flex: 1;">
+                <label>周期</label>
+                <select v-model="form.billing_cycle" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-color); color: var(--text-main); font-size: 14px;">
+                  <option value="month">月付</option>
+                  <option value="quarter">季付</option>
+                  <option value="year">年付</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-group">
@@ -61,49 +69,48 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-// 🌟 1. 引入我们封装好的 request
-import request from '../../../utils/request.js' 
+import request from '@/utils/request.js' 
+import { showToast } from '@/utils/toast.js'
 
 const props = defineProps({
   show: Boolean,
   serverData: Object
-  // 🌟 移除了 token prop
 })
 
 const emit = defineEmits(['close', 'refresh'])
 
 const isSubmitting = ref(false)
 const form = ref({
-  node_id: '', name: '', cost: null, currency: 'CNY', billing_date: '', monthly_bw: null, bw_reset_day: 1, notes: ''
+  node_id: '', name: '', cost: null, currency: 'CNY', billing_cycle: 'month', billing_date: '', monthly_bw: null, bw_reset_day: 1, notes: ''
 })
 
-// 当传入的数据变化或弹窗显示时，同步数据到表单
 watch(() => props.show, (newVal) => {
   if (newVal && props.serverData) {
     form.value = { ...props.serverData }
+    // 兼容旧数据，如果旧数据没有周期字段，默认赋予 month
+    if (!form.value.billing_cycle) {
+      form.value.billing_cycle = 'month'
+    }
   }
 })
 
 const submitEdit = async () => {
   isSubmitting.value = true
   try {
-    // 🌟 2. 格式化数字字段，兜底防止 Go 后端解析 JSON 时报 400 错误
     const payload = {
       ...form.value,
-      cost: form.value.cost ? parseFloat(form.value.cost) : 0,
-      monthly_bw: form.value.monthly_bw ? parseFloat(form.value.monthly_bw) : 0,
+      cost: form.value.cost !== null && form.value.cost !== '' ? parseFloat(form.value.cost) : 0,
+      monthly_bw: form.value.monthly_bw !== null && form.value.monthly_bw !== '' ? parseFloat(form.value.monthly_bw) : 0,
       bw_reset_day: form.value.bw_reset_day ? parseInt(form.value.bw_reset_day, 10) : 1
     }
 
-    // 🌟 3. 使用 request.post 代替原生的 fetch，无需传 token 和 headers
-    await request.post('/api/admin/servers/update', payload)
+    await request.post('/api/admin/servers/save', payload)
     
-    emit('refresh') // 告诉父组件刷新列表
+    emit('refresh') 
     emit('close')
   } catch (e) {
     console.error("更新失败", e)
-    // 错误在拦截器已经统一处理了一部分，这里只需提示业务错误
-    alert("保存失败，详情请查看控制台日志")
+    showToast('保存失败，详情请查看控制台日志', 'error')
   } finally {
     isSubmitting.value = false
   }

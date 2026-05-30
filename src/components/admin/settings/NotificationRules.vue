@@ -1,26 +1,29 @@
 <template>
-  <div class="card fluid-card">
-    <div class="card-header">通知规则</div>
-    <div class="card-body" style="padding: 0;">
+  <div class="card">
+    <div class="card-body" style="overflow-x: auto;">
+      
+      <h3 class="section-title">通知规则</h3>
+      
+      <div style="min-width: max-content; padding-bottom: 8px;">
+        <div class="inner-tabs">
+          <div
+            v-for="tab in tabs"
+            :key="tab.key"
+            :class="['inner-tab', { active: activeTab === tab.key }]"
+            @click="activeTab = tab.key"
+          >
+            {{ tab.label }}
+          </div>
+        </div>
 
-      <div class="inner-tabs">
-        <div
-          v-for="tab in tabs"
-          :key="tab.key"
-          :class="['inner-tab', { active: activeTab === tab.key }]"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label }}
+        <div class="tab-content">
+          <OfflineRule v-if="activeTab === 'offline'" />
+          <LoadRule v-if="activeTab === 'load'" />
+          <TrafficRule v-if="activeTab === 'traffic'" />
+          <ExpiryRule v-if="activeTab === 'expiry'" />
         </div>
       </div>
-
-      <div class="tab-content">
-        <OfflineRule v-if="activeTab === 'offline'" />
-        <LoadRule v-if="activeTab === 'load'" />
-        <TrafficRule v-if="activeTab === 'traffic'" />
-        <ExpiryRule v-if="activeTab === 'expiry'" />
-      </div>
-
+      
     </div>
   </div>
 </template>
@@ -43,13 +46,12 @@ const tabs = [
 </script>
 
 <style scoped>
-.fluid-card { width: 100%; }
-
 .inner-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color, #3a3a4a);
-  padding: 0 24px;
+  border-bottom: 1px solid var(--border-color);
+  /* 去除了原先的 padding: 0 20px; 以便与标题保持左对齐 */
 }
+
 .inner-tab {
   padding: 14px 16px;
   font-size: 14px;
@@ -57,13 +59,23 @@ const tabs = [
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.2s;
+  transition: color 0.2s, border-bottom-color 0.2s;
 }
-.inner-tab.active {
-  color: var(--accent, #7c6af7);
-  border-bottom-color: var(--accent, #7c6af7);
+/* 第一个 tab 取消左侧 padding，让文字绝对左对齐 */
+.inner-tab:first-child {
+  padding-left: 0;
 }
-.inner-tab:hover { color: var(--text-main); }
 
-.tab-content { padding: 24px; }
+.inner-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.inner-tab:hover {
+  color: var(--text-main);
+}
+
+.tab-content {
+  padding: 20px 0 0;
+}
 </style>
