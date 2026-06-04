@@ -133,7 +133,13 @@ export const useServerStore = defineStore('server', () => {
     }
     if (ws) {
       ws.onclose = null // 防止触发断线重连逻辑
-      ws.close()
+      // 仅当连接已完全建立时才调用 close，避免抛出中止握手异常
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close()
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        // 如果正在连接中，将其静默抛弃，交由浏览器后续回收，避免直接调用 close 抛错
+        ws.onerror = null 
+      }
       ws = null
     }
   }

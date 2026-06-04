@@ -14,26 +14,13 @@
         <div class="v-divider"/>
 
         <div class="server-title">
-          <svg class="server-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-            <polyline points="6 8 10 12 6 16"/>
-            <line x1="12" y1="16" x2="18" y2="16"/>
-          </svg>
+          <span class="flag-icon" :title="server?.region">{{ getFlagEmoji(server?.region) }}</span>
           <h2 class="name-text">{{ server?.name || '加载中...' }}</h2>
           <StatusBadge v-if="server" :online="online" />
         </div>
       </div>
 
       <div class="bar-right">
-        <div class="header-heatmap" v-if="server && server.history_24h">
-          <Heatmap24H 
-            :history="server.history_24h" 
-            :sla="server.sla_24h" 
-          />
-        </div>
 
         <SlidingTabs 
           :modelValue="activeTab"
@@ -48,8 +35,7 @@
 <script setup>
 import SlidingTabs from '@/components/common/SlidingTabs.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-// 引入热力图组件
-import Heatmap24H from '@/components/common/Heatmap24H.vue'
+import { getFlagEmoji } from '@/utils/format.js'
 
 const props = defineProps({
   server:      Object,
@@ -90,15 +76,6 @@ const mainTabOptions = [
   gap: 12px; 
 }
 
-.header-heatmap {
-  width: 200px; /* 限制顶栏热力图宽度 */
-  margin-right: 12px;
-}
-
-/* 覆盖 Heatmap24H 默认的 margin-top 使其在顶栏中垂直居中 */
-:deep(.uptime-24h-wrapper) {
-  margin-top: 0 !important;
-}
 
 .back-btn {
   display: inline-flex;
@@ -135,10 +112,12 @@ const mainTabOptions = [
   align-items: center; 
   gap: 8px; 
 }
-.server-icon  { 
-  width: 18px; 
-  height: 18px; 
-  color: var(--text-muted); 
+.flag-icon {
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 2px;
+  overflow: visible; 
+  display: inline-block;
 }
 .name-text    { 
   margin: 0; 

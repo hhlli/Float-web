@@ -1,13 +1,14 @@
 <template>
   <div class="tab-overview-container">
-    <div class="status-overview-card">
-      <div v-for="(val, label) in serverStatusMap" :key="label" class="status-item">
-        <span class="label">{{ label }}</span>
-        <span class="value" :class="{ 'load-val': label === '负载 (1m/5m/15m)' }">{{ val }}</span>
-      </div>
-    </div>
-
     <div class="info-grid">
+      <div class="info-card text-card">
+        <h3>状态总览</h3>
+        <div v-for="(val, label) in serverStatusMap" :key="label" class="text-group">
+          <label>{{ label }}</label>
+          <div class="value">{{ val }}</div>
+        </div>
+      </div>
+
       <div class="info-card resource-card">
         <h3>资源使用情况</h3>
         <div class="metric-list">
@@ -24,9 +25,17 @@
         </div>
       </div>
 
-      <div v-for="section in staticSections" :key="section.title" class="info-card text-card">
-        <h3>{{ section.title }}</h3>
-        <div v-for="item in section.items" :key="item.label" class="text-group">
+      <div class="info-card text-card">
+        <h3>系统信息</h3>
+        <div v-for="item in systemInfo" :key="item.label" class="text-group">
+          <label>{{ item.label }}</label>
+          <div class="value">{{ item.value }}</div>
+        </div>
+      </div>
+
+      <div class="info-card text-card">
+        <h3>硬件信息</h3>
+        <div v-for="item in hardwareInfo" :key="item.label" class="text-group">
           <label>{{ item.label }}</label>
           <div class="value">{{ item.value }}</div>
         </div>
@@ -46,11 +55,25 @@
           <label>连接数</label>
           <div class="value">TCP: {{ netInfo.tcp }}, UDP: {{ netInfo.udp }}</div>
         </div>
-        <div class="text-group mt-auto">
-          <label>三网延迟</label>
-          <div class="value">
-            <OverviewLatency :server="server" />
-          </div>
+      </div>
+
+      <div class="info-card latency-card-wrapper">
+        <h3>三网延迟</h3>
+        <TabOverviewLatency :server="server" />
+      </div>
+
+      <div class="info-card load-card-wrapper">
+        <h3>平均负载</h3>
+        <TabOverviewLoad :server="server" />
+      </div>
+
+      <div class="info-card uptime-card-wrapper">
+        <h3>24H 在线</h3>
+        <div class="heatmap-container">
+          <Heatmap24H 
+            :history="server?.history_24h || []" 
+            :sla="server?.sla_24h || '0.00'" 
+          />
         </div>
       </div>
     </div>
@@ -59,7 +82,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import OverviewLatency from '@/components/common/OverviewLatency.vue'
+import TabOverviewLatency from '@/components/common/TabOverviewLatency.vue'
+import TabOverviewLoad from '@/components/common/TabOverviewLoad.vue'
+import Heatmap24H from '@/components/common/Heatmap24H.vue'
 import {
   formatBytes,
   formatSpeed,
@@ -79,8 +104,7 @@ const serverStatusMap = computed(() => {
     '版本': s.agent_version || '-',
     '运行时间': formatUptime(s.uptime),
     '最后上报': s.last_active ? new Date(s.last_active * 1000).toLocaleString() : '-',
-    '进程': s.processes || 0,
-    '负载 (1m/5m/15m)': `${(s.load_1 || 0).toFixed(2)} / ${(s.load_5 || 0).toFixed(2)} / ${(s.load_15 || 0).toFixed(2)}`
+    '进程': s.processes || 0
   }
 })
 
@@ -102,27 +126,23 @@ const resources = computed(() => {
   ]
 })
 
-const staticSections = computed(() => {
+const systemInfo = computed(() => {
   const s = props.server || {}
   return [
-    {
-      title: '系统信息',
-      items: [
-        { label: '操作系统', value: formatOS(s.os) },
-        { label: '内核版本', value: s.kernel || 'Unknown' },
-        { label: '架构', value: s.arch || 'amd64' },
-        { label: '虚拟化', value: s.virt || 'kvm' }
-      ]
-    },
-    {
-      title: '硬件信息',
-      items: [
-        { label: 'CPU', value: s.cpu_model || 'Unknown Processor' },
-        { label: 'GPU', value: s.gpu_model || 'None' },
-        { label: '内存', value: formatBytes(s.mem_total) },
-        { label: '磁盘', value: formatBytes(s.disk_total) }
-      ]
-    }
+    { label: '操作系统', value: formatOS(s.os) },
+    { label: '内核版本', value: s.kernel || 'Unknown' },
+    { label: '架构', value: s.arch || 'amd64' },
+    { label: '虚拟化', value: s.virt || 'kvm' }
+  ]
+})
+
+const hardwareInfo = computed(() => {
+  const s = props.server || {}
+  return [
+    { label: 'CPU', value: s.cpu_model || 'Unknown Processor' },
+    { label: 'GPU', value: s.gpu_model || 'None' },
+    { label: '内存', value: formatBytes(s.mem_total) },
+    { label: '磁盘', value: formatBytes(s.disk_total) }
   ]
 })
 
@@ -142,18 +162,38 @@ const netInfo = computed(() => {
 <style scoped>
 .tab-overview-container { display: flex; flex-direction: column; gap: 16px; }
 
-.status-overview-card { display: flex; flex-wrap: wrap; gap: 24px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px 24px; }
-.status-item { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--border-color); }
-.status-item:last-child { border-right: none; }
-.status-item .label { font-size: 14px; color: var(--text-muted); }
-.status-item .value { font-size: 15px; font-weight: 600; color: var(--text-main); }
-.load-val { font-family: monospace; }
+/* 网格布局：5 列 */
+.info-grid { 
+  display: grid; 
+  grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr; 
+  gap: 16px; 
+}
 
-/* 网格比例调整：两侧宽(1.5fr)，中间窄(1fr) */
-.info-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr; gap: 16px; }
+/* 底部布局分配 */
+.latency-card-wrapper {
+  grid-column: 1 / 4; /* 延迟占前 3 列 */
+}
+.load-card-wrapper {
+  grid-column: 4 / 5; /* 负载占第 4 列 */
+}
+.uptime-card-wrapper {
+  grid-column: 5 / 6; /* 24小时在线占第 5 列 */
+}
 
-.info-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; }
-.info-card h3 { font-size: 15px; color: var(--text-muted); margin: 0 0 20px 0; font-weight: 500; }
+.info-card { 
+  background: var(--surface-color); 
+  border: 1px solid var(--border-color); 
+  border-radius: 12px; 
+  padding: 24px; 
+  display: flex; 
+  flex-direction: column; 
+}
+.info-card h3 { 
+  font-size: 15px; 
+  color: var(--text-muted); 
+  margin: 0 0 20px 0; 
+  font-weight: 500; 
+}
 
 .metric-list { display: flex; flex-direction: column; gap: 16px; }
 .metric-text { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
@@ -167,15 +207,27 @@ const netInfo = computed(() => {
 .text-group .value { font-size: 14px; font-weight: 600; }
 .speed-val { line-height: 1.5; }
 
-/* 使三网延迟靠底部对齐 */
-.mt-auto { margin-top: auto; }
+.heatmap-container {
+  flex: 1;
+  display: flex;
+  align-items: center; /* 垂直居中热力图，适配卡片高度 */
+}
 
+/* 响应式断点调整 */
+@media (max-width: 1400px) {
+  .info-grid { grid-template-columns: repeat(3, 1fr); }
+  .latency-card-wrapper { grid-column: 1 / -1; }
+  .load-card-wrapper { grid-column: 1 / 2; }
+  .uptime-card-wrapper { grid-column: 2 / 4; }
+}
 @media (max-width: 1200px) {
   .info-grid { grid-template-columns: repeat(2, 1fr); }
+  .latency-card-wrapper { grid-column: 1 / -1; }
+  .load-card-wrapper { grid-column: 1 / -1; }
+  .uptime-card-wrapper { grid-column: 1 / -1; }
 }
 @media (max-width: 768px) {
   .info-grid { grid-template-columns: 1fr; }
-  .status-overview-card { flex-direction: column; }
-  .status-item { border-right: none; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
 }
+
 </style>
