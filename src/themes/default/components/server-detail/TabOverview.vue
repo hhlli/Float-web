@@ -68,7 +68,7 @@
       </div>
 
       <div class="info-card uptime-card-wrapper">
-        <h3>24H 在线</h3>
+        <h3>24h 在线</h3>
         <div class="heatmap-container">
           <Heatmap24H 
             :history="server?.history_24h || []" 
@@ -76,15 +76,15 @@
           />
         </div>
       </div>
-    </div>
-  </div>
-</template>
+    </div> <DockerInlineList :dockerData="server?.docker_containers" />
+  </div> </template>
 
 <script setup>
 import { computed } from 'vue'
 import TabOverviewLatency from '@/components/common/TabOverviewLatency.vue'
 import TabOverviewLoad from '@/components/common/TabOverviewLoad.vue'
 import Heatmap24H from '@/components/common/Heatmap24H.vue'
+import DockerInlineList from '@/components/common/DockerInlineList.vue' // 新增引入
 import {
   formatBytes,
   formatSpeed,
@@ -216,18 +216,24 @@ const netInfo = computed(() => {
 /* 响应式断点调整 */
 @media (max-width: 1400px) {
   .info-grid { grid-template-columns: repeat(3, 1fr); }
-  .latency-card-wrapper { grid-column: 1 / -1; }
-  .load-card-wrapper { grid-column: 1 / 2; }
-  .uptime-card-wrapper { grid-column: 2 / 4; }
+  /* 覆盖默认的 1 / 4，使其在 3 列模式下只占 1 列，自然顺延 */
+  .latency-card-wrapper { grid-column: span 1; }
+  .load-card-wrapper { grid-column: span 1; }
+  .uptime-card-wrapper { grid-column: span 1; }
 }
+
 @media (max-width: 1200px) {
   .info-grid { grid-template-columns: repeat(2, 1fr); }
-  .latency-card-wrapper { grid-column: 1 / -1; }
-  .load-card-wrapper { grid-column: 1 / -1; }
-  .uptime-card-wrapper { grid-column: 1 / -1; }
+  /* 在 2 列模式下只占 1 列，正好与“网络信息”并排 */
+  .latency-card-wrapper { grid-column: span 1; }
+  .load-card-wrapper { grid-column: span 1; }
+  .uptime-card-wrapper { grid-column: span 1; }
 }
+
 @media (max-width: 768px) {
   .info-grid { grid-template-columns: 1fr; }
+  /* 手机端 1 列模式下，默认都会占满 1 整行 */
+  .latency-card-wrapper { grid-column: span 1; }
 }
 
 </style>

@@ -8,7 +8,6 @@
             <line x1="19" y1="12" x2="5" y2="12"/>
             <polyline points="12 19 5 12 12 5"/>
           </svg>
-          返回
         </button>
 
         <div class="v-divider"/>
@@ -67,7 +66,9 @@ const mainTabOptions = [
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  min-height: 56px; /* 改为 min-height 以适应内容换行 */
+  min-height: 56px;
+  flex-wrap: wrap; /* 允许在极端情况下自然换行 */
+  gap: 12px;
 }
 
 .bar-left, .bar-right { 
@@ -75,7 +76,6 @@ const mainTabOptions = [
   align-items: center; 
   gap: 12px; 
 }
-
 
 .back-btn {
   display: inline-flex;
@@ -92,9 +92,11 @@ const mainTabOptions = [
   color: var(--text-main);
   transition: background 0.15s;
 }
+
 .back-btn:hover { 
   background: var(--bg-color); 
 }
+
 .back-btn svg { 
   width: 16px; 
   height: 16px; 
@@ -112,6 +114,7 @@ const mainTabOptions = [
   align-items: center; 
   gap: 8px; 
 }
+
 .flag-icon {
   font-size: 18px;
   line-height: 1;
@@ -119,7 +122,8 @@ const mainTabOptions = [
   overflow: visible; 
   display: inline-block;
 }
-.name-text    { 
+
+.name-text { 
   margin: 0; 
   font-size: 17px; 
   font-weight: 600; 
@@ -131,18 +135,13 @@ const mainTabOptions = [
     padding: 12px 16px; 
     flex-wrap: wrap; 
     height: auto; 
-    gap: 12px; 
+    gap: 4px; /* 重点：控制你圈出位置被挤压到极限时的最小间距，4px 够紧凑了 */
   }
   .name-text { 
     font-size: 15px; 
   }
   .bar-right {
-    width: 100%;
-    justify-content: space-between; /* 移动端两端对齐 */
-  }
-  .header-heatmap {
-    width: 160px; /* 移动端适当缩小宽度 */
-    margin-right: 0;
+    width: auto; /* 重点：去掉原来的 100% 宽度，让它允许呆在第一行 */
   }
 }
 </style>

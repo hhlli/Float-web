@@ -7,24 +7,19 @@
         class="theme-card"
         :class="{ 'is-active': currentTheme === theme.id }"
       >
-        <div class="theme-preview">
-          <img 
-            :src="theme.preview || 'https://images.unsplash.com/photo-1550439062-609e1531270e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'" 
-            alt="Theme Preview"
-          >
-          <div v-if="currentTheme === theme.id" class="active-badge">
-            <span class="pulse-dot"></span>
-            当前活动
-          </div>
-        </div>
-
         <div class="theme-info">
-          <div class="flex-header" style="align-items: flex-start; margin-bottom: 12px;">
-            <div>
-              <h3 class="section-title" style="margin-bottom: 2px; font-size: 15px;">{{ theme.name }}</h3>
-              <span class="help-text" style="font-size: 12px;">ID: {{ theme.id }}</span>
+          <div class="flex-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 class="section-title" style="margin: 0; font-size: 15px;">{{ theme.name }}</h3>
+                <div v-if="currentTheme === theme.id" class="active-badge" style="padding: 2px 8px;">
+                  <span class="pulse-dot"></span>
+                  当前活动
+                </div>
+              </div>
+              <span class="help-text" style="font-size: 12px; margin: 0; line-height: 1;">ID: {{ theme.id }}</span>
             </div>
-            <span class="badge info">v{{ theme.version || '1.0.0' }}</span>
+            <span class="badge info" style="flex-shrink: 0;">v{{ theme.version || '1.0.0' }}</span>
           </div>
 
           <div class="theme-desc">
@@ -96,13 +91,12 @@ const scanAvailableThemes = () => {
       name: themeData.name || themeId,
       version: themeData.version,
       author: themeData.author,
-      description: themeData.description,
-      preview: themeData.preview ? `src/themes/${themeId}/${themeData.preview}` : null 
+      description: themeData.description
     })
   }
   
   if (!themes.find(t => t.id === 'default')) {
-    themes.push({ id: 'default', name: '系统默认', version: '1.0.0', author: 'Float Team', description: 'Float 监控的原生专业主题，平衡性能与美学。' })
+    themes.push({ id: 'default', name: '系统默认', version: '1.0.0', author: 'Float', description: 'Float 监控的原生专业主题，平衡性能与美学。' })
   }
   
   availableThemes.value = themes
@@ -168,9 +162,8 @@ onMounted(() => {
 }
 
 .theme-card:hover {
-  /* 移除 transform: translateY(-4px); 解决上侧被遮挡问题 */
-  border-color: var(--primary-color); /* 添加悬停时的主题色边框 */
-  box-shadow: 0 8px 16px rgba(0,0,0,0.06); /* 保留原有阴影以区分层级 */
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06); 
 }
 
 .theme-card.is-active {
@@ -178,39 +171,16 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.theme-preview {
-  height: 106px;
-  width: 100%;
-  background: var(--border-color);
-  position: relative;
-  overflow: hidden;
-}
-
-.theme-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.theme-card:hover .theme-preview img {
-  transform: scale(1.05);
-}
-
 .active-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--surface-color);
+  background: rgba(16, 185, 129, 0.1);
   padding: 4px 10px;
   border-radius: 16px;
   font-size: 11px;
   font-weight: 600;
   color: #10b981;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .pulse-dot {
@@ -277,7 +247,7 @@ onMounted(() => {
 .create-card:hover {
   border-color: var(--primary-color);
   background: rgba(59, 130, 246, 0.03);
-  transform: translateY(-2px);
+  /* 已移除 transform: translateY(-2px); 修复遮挡上边缘问题 */
   box-shadow: none;
 }
 

@@ -29,12 +29,6 @@ export const cardStyles = [
     component: defineAsyncComponent(() => import('./ServerCardHeatmap.vue')),
   },
   {
-    value: 'docker',
-    label: 'Docker 容器',
-    desc: '专用于监控容器运行状态',
-    component: defineAsyncComponent(() => import('./ServerCardDocker.vue')),
-  },
-  {
     value: 'typography',
     label: '极简拓扑',
     desc: '高密度纯数据展示，颜色编码',

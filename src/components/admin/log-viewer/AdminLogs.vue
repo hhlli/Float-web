@@ -110,17 +110,38 @@ onMounted(() => {
 .select-sm { width: auto; padding: 6px 10px; font-size: 13px; min-width: 100px; }
 .btn-sm { display: flex; align-items: center; padding: 6px 12px; font-size: 13px; }
 
+/* 容器与表格宽度控制 */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  min-width: 600px;
+}
+
 /* 表格列宽控制 */
-.col-time { width: 180px; }
+.col-time { 
+  width: 180px; 
+  white-space: nowrap; 
+}
 .col-level { width: 100px; }
 
 /* 单元格内容样式 */
 .empty-cell { text-align: center; color: var(--text-muted); padding: 30px; }
-.log-time { color: var(--text-muted); font-size: 13px; }
+.log-time { 
+  color: var(--text-muted); 
+  font-size: 13px; 
+  white-space: nowrap; 
+}
 .log-message { 
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
   font-size: 13px; 
   color: var(--text-main); 
+  white-space: pre-wrap; 
+  word-break: break-all; 
 }
 
 /* 补充全局缺少的 Warning 徽章样式 */
