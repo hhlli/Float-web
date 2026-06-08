@@ -10,8 +10,6 @@
         <span class="stat-value">{{ currentTime }}</span>
       </div>
 
-      <div class="divider-v"></div>
-
       <div class="stat-cell">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="stat-icon">
           <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
@@ -19,18 +17,10 @@
           <line x1="6" y1="6" x2="6.01" y2="6"></line>
           <line x1="6" y1="18" x2="6.01" y2="18"></line>
         </svg>
-        <div class="server-progress-wrapper" title="在线节点 / 总节点">
-          <svg class="ring-chart" viewBox="0 0 36 36">
-            <circle class="ring-bg" cx="18" cy="18" r="15.9155" />
-            <circle class="ring-value" cx="18" cy="18" r="15.9155" :stroke-dasharray="`${onlinePercent}, 100`" />
-          </svg>
-          <span class="progress-text">{{ onlineCount }} / {{ serverCount }}</span>
-        </div>
+        <span class="stat-value" title="在线节点 / 总节点">{{ onlineCount }} / {{ serverCount }}</span>
       </div>
 
-      <div class="divider-v"></div>
-
-      <div class="stat-cell">
+      <div class="stat-cell metric-cell">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="stat-icon">
           <path d="M21.54 15H17a2 2 0 0 0-2 2v4.54"></path>
           <path d="M7 3.34V5a3 3 0 0 0 3 3v0a2 2 0 0 1 2 2v0c0 1.1.9 2 2 2v0a2 2 0 0 0 2-2v0c0-1.1.9-2 2-2h1.03"></path>
@@ -40,9 +30,7 @@
         <span class="stat-value">↑ {{ totalTrafficTx }} | ↓ {{ totalTrafficRx }}</span>
       </div>
 
-      <div class="divider-v"></div>
-
-      <div class="stat-cell">
+      <div class="stat-cell metric-cell">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="stat-icon">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
@@ -56,40 +44,12 @@
         @update:modelValue="$emit('update:searchQuery', $event)"
       />
 
-      <div class="filter-wrapper" ref="filterRef">
-        <button class="icon-btn" :class="{ active: showFilter }" @click="showFilter = !showFilter" title="筛选与排序">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-          </svg>
-        </button>
-
-        <div v-if="showFilter" class="filter-panel">
-          <div class="panel-item">
-            <span class="panel-label">运行状态</span>
-            <BaseSelect 
-              :modelValue="filterBy"
-              @update:modelValue="$emit('update:filterBy', $event)"
-              :options="filterOptions" 
-            />
-          </div>
-          <div class="panel-item">
-            <span class="panel-label">节点排序</span>
-            <BaseSelect 
-              :modelValue="sortBy"
-              @update:modelValue="$emit('update:sortBy', $event)"
-              :options="sortOptions" 
-            />
-          </div>
-          <div class="panel-item">
-            <span class="panel-label">视图分组</span>
-            <BaseSelect 
-              :modelValue="groupBy"
-              @update:modelValue="$emit('update:groupBy', $event)"
-              :options="groupOptions" 
-            />
-          </div>
-        </div>
-      </div>
+      <PublicFilterPanel
+        :filterBy="filterBy"
+        :groupBy="groupBy"
+        @update:filterBy="$emit('update:filterBy', $event)"
+        @update:groupBy="$emit('update:groupBy', $event)"
+      />
 
       <div class="divider-v"></div>
 
@@ -104,9 +64,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import PublicSearchBox from './PublicSearchBox.vue'
+import PublicFilterPanel from './PublicFilterPanel.vue'
 
 const props = defineProps({
   serverCount:    Number,
@@ -118,18 +79,12 @@ const props = defineProps({
   totalSpeedRx:   { type: String, default: '0 B/s' },
   searchQuery:    String,
   filterBy:       String,
-  sortBy:         String,
   groupBy:        String,
   cardStyle:      String,
   styleOptions:   Array
 })
 
-defineEmits(['update:searchQuery', 'update:filterBy', 'update:sortBy', 'update:groupBy', 'update:cardStyle'])
-
-const onlinePercent = computed(() => {
-  if (!props.serverCount) return 0
-  return (props.onlineCount / props.serverCount) * 100
-})
+defineEmits(['update:searchQuery', 'update:filterBy', 'update:groupBy', 'update:cardStyle'])
 
 const currentTime = ref('')
 let timeInterval = null
@@ -142,40 +97,12 @@ const updateTime = () => {
   currentTime.value = `${hh}:${mm}:${ss}`
 }
 
-const filterOptions = [
-  { label: '全部状态', value: 'all' },
-  { label: '仅在线', value: 'online' },
-  { label: '仅离线', value: 'offline' }
-]
-
-const sortOptions = [
-  { label: '默认排序', value: 'default' },
-  { label: 'CPU 负载', value: 'cpu' },
-  { label: '网速降序', value: 'network' }
-]
-
-const groupOptions = [
-  { label: '不分组', value: 'none' },
-  { label: '按区域', value: 'region' }
-]
-
-const showFilter = ref(false)
-const filterRef = ref(null)
-
-const handleClickOutside = (e) => {
-  if (filterRef.value && !filterRef.value.contains(e.target)) {
-    showFilter.value = false
-  }
-}
-
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
   if (timeInterval) clearInterval(timeInterval)
 })
 </script>
@@ -190,22 +117,22 @@ onUnmounted(() => {
   background: var(--surface-color); 
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm); 
-  padding: 8px 20px; 
+  padding: 10px 20px; 
   box-sizing: border-box;
   
   display: flex;
-  flex-wrap: wrap; /* 允许在屏幕极窄时，左右两大部分整体折行 */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 12px 16px;
+  gap: 16px;
 }
 
 /* --- 左侧流式数据区 --- */
 .toolbar-stats {
   display: flex;
-  flex-wrap: wrap; /* 允许独立数据项在空间不足时依次折行 */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -215,7 +142,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0; /* 保证右侧功能区不被压缩变形 */
+  flex-shrink: 0;
   margin-left: auto;
 }
 
@@ -223,9 +150,23 @@ onUnmounted(() => {
 .stat-cell {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   white-space: nowrap;
-  flex-shrink: 0;
+  
+  height: 32px;
+  padding: 0 10px;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+
+  flex: 1 1 auto;
+}
+
+.metric-cell {
+  flex: 1.2 1 auto; 
+  justify-content: center;
 }
 
 .stat-icon {
@@ -240,8 +181,23 @@ onUnmounted(() => {
   color: var(--text-main);
   font-weight: 500;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  
+  /* 核心修复：激活块级控制权，并锁死文本对齐方向 */
+  display: inline-block;
+  text-align: left;
+}
+/* 锁定短数据（时间、节点数）的绝对物理宽度 */
+.stat-cell:not(.metric-cell) .stat-value {
+  width: 65px; 
 }
 
+/* 锁定长数据（流量、网速）的绝对物理宽度 */
+.metric-cell .stat-value {
+  width: 185px; 
+}
+
+/* --- 分隔线 (仅保留右侧操作区所需) --- */
 .divider-v { 
   width: 1px; 
   height: 16px; 
@@ -249,26 +205,19 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* --- 圆环进度条 --- */
-.server-progress-wrapper { display: flex; align-items: center; gap: 6px; }
-.ring-chart { width: 20px; height: 20px; transform: rotate(-90deg); }
-.ring-bg { fill: none; stroke: #ef4444; stroke-width: 5; }
-.ring-value { fill: none; stroke: #10b981; stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
-.progress-text { font-size: 13px; font-weight: 600; color: var(--text-main); font-variant-numeric: tabular-nums; }
-
-/* --- 工具图标按钮 --- */
-.icon-btn { background: transparent; border: 1px solid transparent; padding: 6px; border-radius: 6px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; transition: all 0.2s; }
-.icon-btn:hover, .icon-btn.active { background: var(--bg-color); color: var(--text-main); }
-.icon-btn svg { width: 16px; height: 16px; }
-
-/* --- 筛选面板 --- */
-.filter-wrapper { position: relative; }
-.filter-panel { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 16px; width: 200px; display: flex; flex-direction: column; gap: 16px; z-index: 100; }
-.panel-item { display: flex; flex-direction: column; gap: 6px; }
-.panel-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
-
-/* --- 响应式处理 (隐藏竖线以避免折行时排版错位) --- */
+/* --- 移动端排版修正 --- */
 @media (max-width: 900px) {
+  .toolbar-bar {
+    padding: 12px 16px;
+  }
+  
+  .toolbar-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
   .divider-v {
     display: none;
   }

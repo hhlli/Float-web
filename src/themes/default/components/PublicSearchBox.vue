@@ -1,6 +1,6 @@
 <template>
   <div class="search-wrapper" :class="{ 'is-active': showSearch || modelValue }">
-    <div class="icon-box" @click="openSearch" title="搜索节点">
+    <div class="icon-box" @mousedown.prevent="handleIconClick" title="搜索节点">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
@@ -32,11 +32,21 @@ const emit = defineEmits(['update:modelValue'])
 const showSearch = ref(false)
 const searchInput = ref(null)
 
-const openSearch = () => {
-  showSearch.value = true
-  nextTick(() => {
-    searchInput.value?.focus()
-  })
+// 核心修改：增加状态判断逻辑，实现正确的展开与收回切换
+const handleIconClick = () => {
+  if (showSearch.value) {
+    // 处于激活状态且没有输入内容时，点击放大镜收回
+    if (!props.modelValue) {
+      showSearch.value = false
+      searchInput.value?.blur()
+    }
+  } else {
+    // 处于未激活状态时，展开并聚焦
+    showSearch.value = true
+    nextTick(() => {
+      searchInput.value?.focus()
+    })
+  }
 }
 
 const handleSearchBlur = () => {
@@ -104,7 +114,8 @@ input:focus {
 
 .search-wrapper.is-active input {
   width: 150px;
-  padding-right: 12px; /* 左侧贴紧图标，仅保留右侧安全距离 */
+  padding-left: 6px;
+  padding-right: 12px; 
 }
 .icon-box svg {
   width: 16px;

@@ -5,9 +5,14 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <span class="header-text">Float</span>
-      <span class="version-tag" v-show="!isCollapsed && siteSettings?.server_version">
-        {{ siteSettings.server_version }}
-      </span>
+      <div class="version-container" v-show="!isCollapsed && siteSettings?.server_version">
+        <span class="version-tag">
+          {{ siteSettings.server_version }}
+        </span>
+        <a v-if="siteStore.hasUpdate" href="https://github.com/hhlli/Float/releases" target="_blank" class="update-arrow" title="有新版本可用">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+        </a>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <div :class="['nav-item', { active: route.path.includes('/admin/servers') }]" @click="goTo('/admin/servers')" title="服务器">
@@ -100,10 +105,12 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import request from '@/utils/request.js'
 import { useAuthStore } from '@/store/auth.js'
+import { useSiteStore } from '@/store/site.js' // 新增引入
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const siteStore = useSiteStore() // 初始化 store
 
 // 1. 记录初始的屏幕状态 (是否为移动端/窄屏)
 let wasMobile = window.innerWidth <= 768
@@ -269,5 +276,26 @@ const handleLogout = () => {
     min-width: 200px;
   }
 }
+.version-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
 
+.update-arrow {
+  color: #10b981; /* 绿色提示，可根据主题修改 */
+  display: inline-flex;
+  align-items: center;
+  animation: bounce 2s infinite;
+}
+
+.update-arrow:hover {
+  color: #059669;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
 </style>

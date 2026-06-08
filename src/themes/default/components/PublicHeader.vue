@@ -68,7 +68,7 @@ const props = defineProps({
   siteName: { type: String, default: '' },
   siteDesc: { type: String, default: '' },
   siteLogo: { type: String, default: '' },
-  githubUrl: { type: String, default: 'https://github.com' }
+  githubUrl: { type: String, default: 'https://github.com/hhlli/Float' }
 })
 
 const emit = defineEmits(['open-login', 'switch-lang'])

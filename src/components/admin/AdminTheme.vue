@@ -57,14 +57,65 @@
         </div>
       </div>
 
-      <div class="theme-card create-card">
-        <div class="icon-wrapper">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      <div class="create-card-minimal" @click="showImportModal = true">
+        <div class="icon-wrapper" title="导入新主题">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </div>
-        <h3 class="section-title" style="margin-bottom: 6px; font-size: 15px;">开发新主题</h3>
-        <p class="help-text" style="text-align: center; line-height: 1.4; font-size: 12px;">在 themes/ 目录下<br>新建文件夹即可识别</p>
       </div>
     </div>
+
+    <BaseModal 
+      :show="showImportModal" 
+      title="导入新主题" 
+      @close="showImportModal = false"
+    >
+      <div class="form-group" style="margin-bottom: 16px;">
+        <div class="import-tabs" style="display: flex; gap: 8px; background: var(--bg-color); padding: 4px; border-radius: 8px;">
+          <button class="tab-btn" :class="{ active: importMode === 'github' }" @click="importMode = 'github'">GitHub 拉取</button>
+          <button class="tab-btn" :class="{ active: importMode === 'zip' }" @click="importMode = 'zip'">ZIP 上传</button>
+        </div>
+      </div>
+
+      <div v-if="importMode === 'github'" class="form-group">
+        <label>仓库地址</label>
+        <input 
+          v-model="githubUrl" 
+          type="text" 
+          placeholder="https://github.com/user/repo" 
+          class="form-control" 
+        />
+      </div>
+
+      <div v-else class="form-group">
+        <label>主题压缩包</label>
+        <div 
+          @click="triggerFileInput" 
+          class="form-control"
+          style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: var(--bg-color); transition: border-color 0.2s;"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); flex-shrink: 0;">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span :style="{ color: selectedFileName ? 'var(--text-main)' : 'var(--text-muted)' }" style="font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            {{ selectedFileName || '点击选择 .zip 格式的主题包' }}
+          </span>
+        </div>
+        <input type="file" ref="fileInput" accept=".zip" style="display: none" @change="handleFileChange" />
+      </div>
+
+      <template #footer>
+        <button class="btn-outline" @click="showImportModal = false">取消</button>
+        <button v-if="importMode === 'github'" @click="installFromGithub" :disabled="isInstalling || !githubUrl" class="btn-primary">
+          {{ isInstalling ? '拉取中...' : '确认拉取' }}
+        </button>
+        <button v-else @click="uploadZipTheme" :disabled="isUploading || !selectedFile" class="btn-primary">
+          {{ isUploading ? '上传中...' : '确认上传' }}
+        </button>
+      </template>
+    </BaseModal>
+
   </div>
 </template>
 
@@ -73,33 +124,100 @@ import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
 import { useSiteStore } from '@/store/site'
 import { showToast } from '@/utils/toast.js'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const currentTheme = ref('default')
 const availableThemes = ref([])
 const isSaving = ref(false)
 const siteStore = useSiteStore()
 
-const scanAvailableThemes = () => {
-  const themeFiles = import.meta.glob('../../themes/*/theme.json', { eager: true })
-  const themes = []
-  
-  for (const path in themeFiles) {
-    const themeId = path.split('/')[3]
-    const themeData = themeFiles[path].default || themeFiles[path]
-    themes.push({
-      id: themeId,
-      name: themeData.name || themeId,
-      version: themeData.version,
-      author: themeData.author,
-      description: themeData.description
-    })
+const importMode = ref('github') // 切换 github 和 zip
+const githubUrl = ref('')
+const isInstalling = ref(false)
+const showImportModal = ref(false)
+
+// 文件上传相关变量
+const fileInput = ref(null)
+const selectedFile = ref(null)
+const selectedFileName = ref('')
+const isUploading = ref(false)
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleFileChange = (e) => {
+  const file = e.target.files[0]
+  if (file && file.name.toLowerCase().endsWith('.zip')) {
+    selectedFile.value = file
+    selectedFileName.value = file.name
+  } else {
+    showToast('请选择 .zip 格式的文件', 'error')
+    e.target.value = ''
   }
+}
+
+const uploadZipTheme = async () => {
+  if (!selectedFile.value) return
+  isUploading.value = true
   
-  if (!themes.find(t => t.id === 'default')) {
-    themes.push({ id: 'default', name: '系统默认', version: '1.0.0', author: 'Float', description: 'Float 监控的原生专业主题，平衡性能与美学。' })
+  const formData = new FormData()
+  formData.append('file', selectedFile.value)
+
+  try {
+    await request.post('/api/admin/settings/theme/upload', formData)
+    showToast('ZIP 主题上传并解析成功', 'success')
+    
+    selectedFile.value = null
+    selectedFileName.value = ''
+    if (fileInput.value) fileInput.value.value = ''
+    
+    // 关闭弹窗
+    showImportModal.value = false
+    await scanAvailableThemes()
+  } catch (e) {
+    showToast(e.response?.data?.message || e.message || '上传解压失败', 'error')
+  } finally {
+    isUploading.value = false
+  }
+}
+
+const scanAvailableThemes = async () => {
+  // 定义内置主题
+  const themes = [
+    { id: 'default', name: '系统默认', version: '1.0.0', author: 'Float', description: 'Float 监控的原生专业主题，平衡性能与美学。' },
+    { id: 'matrix', name: 'Matrix', version: '1.0.0', author: 'Float', description: '基于数据矩阵布局的主题。' }
+  ]
+  
+  // 获取远端拉取的第三方主题
+  try {
+    const data = await request.get('/api/admin/settings/theme/list')
+    if (Array.isArray(data)) {
+      themes.push(...data)
+    }
+  } catch (e) {
+    console.error('获取第三方主题列表失败', e)
   }
   
   availableThemes.value = themes
+}
+
+const installFromGithub = async () => {
+  if (!githubUrl.value || isInstalling.value) return
+  isInstalling.value = true
+  try {
+    await request.post('/api/admin/settings/theme/install', { url: githubUrl.value })
+    showToast('主题拉取成功', 'success')
+    githubUrl.value = ''
+    
+    // 关闭弹窗
+    showImportModal.value = false
+    await scanAvailableThemes() 
+  } catch (e) {
+    showToast(e.response?.data?.message || e.message || '安装失败', 'error')
+  } finally {
+    isInstalling.value = false
+  }
 }
 
 const loadCurrentTheme = async () => {
@@ -234,40 +352,63 @@ onMounted(() => {
   padding-top: 12px;
 }
 
-.create-card {
-  border: 2px dashed var(--border-color);
+.tab-btn {
+  flex: 1;
+  padding: 6px 0;
+  text-align: center;
+  border-radius: 6px;
+  border: none;
   background: transparent;
-  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  background: var(--surface-color);
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.upload-area:hover {
+  border-color: var(--primary-color) !important;
+  background: rgba(59, 130, 246, 0.03) !important;
+}
+
+/* 极简触发卡片样式 */
+.create-card-minimal {
+  background: transparent;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  min-height: 180px; 
   cursor: pointer;
 }
 
-.create-card:hover {
-  border-color: var(--primary-color);
-  background: rgba(59, 130, 246, 0.03);
-  /* 已移除 transform: translateY(-2px); 修复遮挡上边缘问题 */
-  box-shadow: none;
-}
-
 .icon-wrapper {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
   color: var(--text-muted);
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
 }
 
-.create-card:hover .icon-wrapper {
+.create-card-minimal:hover .icon-wrapper {
   color: var(--primary-color);
   border-color: var(--primary-color);
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 </style>

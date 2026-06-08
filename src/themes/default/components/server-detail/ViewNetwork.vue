@@ -10,8 +10,8 @@
   <div v-show="networkStats && networkStats.length > 0" class="ping-dashboard">
       <div class="chart-wrapper" style="position: relative;">
         <div ref="domPing" class="chart-wrap-network"></div>
-        <button class="chart-legend-toggle" @click="toggleAllLegends" :title="props.isAllHidden ? '显示全部' : '隐藏全部'">
-          <svg v-if="props.isAllHidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-eye">
+        <button class="chart-legend-toggle" @click="toggleAllLegends" :title="isAllHidden ? '显示全部' : '隐藏全部'">
+          <svg v-if="isAllHidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-eye">
             <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
             <line x1="1" y1="1" x2="23" y2="23"></line>
           </svg>
@@ -72,10 +72,10 @@ const props = defineProps({
   pingSummaryData:  { type: Array, default: () => [] },
   mergedPingOption: { type: Object, default: () => ({}) },
   pingRawData:      { type: Array, default: () => [] },
-  isAllHidden:      { type: Boolean, default: false },
+  legendSelected:   { type: Object, default: () => ({}) },
 })
 
-const emit = defineEmits(['toggle-legend', 'legend-change'])
+const emit = defineEmits(['update:legendSelected'])
 
 const domPing = ref(null)
 
@@ -83,11 +83,13 @@ useEChart(domPing, toRef(props, 'mergedPingOption'))
 
 let chartInstance = null
 
+const isAllHidden = computed(() => {
+  if (!props.pingSummaryData || props.pingSummaryData.length === 0) return false
+  return props.pingSummaryData.every(item => props.legendSelected[item.nodeName] === false)
+})
+
 const handleLegendChange = (params) => {
-  const selected = params.selected || {}
-  const keys = Object.keys(selected)
-  const allHidden = keys.length > 0 && keys.every(k => selected[k] === false)
-  emit('legend-change', allHidden)
+  emit('update:legendSelected', params.selected || {})
 }
 
 onMounted(() => {
@@ -107,7 +109,12 @@ onUnmounted(() => {
 })
 
 const toggleAllLegends = () => {
-  emit('toggle-legend')
+  const targetState = isAllHidden.value
+  const newState = {}
+  props.pingSummaryData.forEach(item => {
+    newState[item.nodeName] = targetState
+  })
+  emit('update:legendSelected', newState)
 }
 
 const networkStats = computed(() => {
@@ -219,10 +226,10 @@ const networkStats = computed(() => {
   font-weight: 600;
   color: var(--text-main, #334155);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap; /* 允许在极端窄屏下自然换行 */
+  gap: 6px 10px; /* 控制上下左右间距 */
 }
 
 .warn { color: #ef4444; }
@@ -293,7 +300,7 @@ const networkStats = computed(() => {
 }
 
 @media (max-width: 600px) {
-  .ping-grid { grid-template-columns: 1fr 1fr; }
+  .ping-grid { grid-template-columns: 1fr; } /* 窄屏幕下改为单列显示，避免挤压 */
 }
 
 .chart-legend-toggle {

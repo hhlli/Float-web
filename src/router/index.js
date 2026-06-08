@@ -2,9 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useSiteStore } from '@/store/site'
 
 // 1. 分类预加载所有主题的视图文件映射
-const themeViews = {
-  PublicView: import.meta.glob('../themes/*/views/PublicView.vue'),
-  ServerDetailView: import.meta.glob('../themes/*/views/ServerDetailView.vue')
+// 仅保留内置主题的静态映射
+const builtinThemes = {
+  default: {
+    PublicView: () => import('../themes/default/views/PublicView.vue'),
+    ServerDetailView: () => import('../themes/default/views/ServerDetailView.vue')
+  },
+  matrix: {
+    PublicView: () => import('../themes/matrix/views/PublicView.vue')
+    // 注意：matrix 主题没有 ServerDetailView.vue，所以这里不写，依靠下方逻辑降级
+  }
 }
 
 const getThemeView = async (viewType) => {
@@ -12,20 +19,22 @@ const getThemeView = async (viewType) => {
   await store.fetchSettings()
   
   const theme = store.theme || 'default'
-  const path = `../themes/${theme}/views/${viewType}.vue`
-  const viewsMap = themeViews[viewType]
   
-  // 命中对应主题组件
-  if (viewsMap && viewsMap[path]) {
-    return viewsMap[path]()
+  // 内置主题：正常挂载 Vue 组件
+  if (builtinThemes[theme]) {
+    // 优先加载当前主题的对应视图
+    if (builtinThemes[theme][viewType]) {
+      return builtinThemes[theme][viewType]()
+    }
+    // 降级机制：如果当前主题缺少该视图（如 matrix 缺少 ServerDetailView），则使用 default 的对应视图
+    if (builtinThemes['default'][viewType]) {
+      return builtinThemes['default'][viewType]()
+    }
   }
   
-  // 修正后的降级回退机制：从各自的映射表中获取 default 组件
-  if (viewsMap && viewsMap[`../themes/default/views/${viewType}.vue`]) {
-    return viewsMap[`../themes/default/views/${viewType}.vue`]()
-  }
-
-  throw new Error(`Component ${viewType} not found in theme ${theme} or default.`)
+  // 第三方主题：让出前端路由控制权，强制浏览器发起请求以获取后端的独立 HTML
+  window.location.href = window.location.pathname
+  return { template: '<div></div>' }
 }
 
 const router = createRouter({

@@ -14,7 +14,7 @@ const COLORS = {
   proc: '#ef4444',
 }
 
-export function useChartOptions(metricsData, pingData, isSmooth = false, isConnectNulls = false, isAllHidden = ref(false)) {
+export function useChartOptions(metricsData, pingData, isSmooth = false, isConnectNulls = false, legendSelected = ref({})) {
 
   const cpuOption = computed(() => {
     const _dark = isDarkMode.value // 建立响应式依赖
@@ -167,7 +167,7 @@ export function useChartOptions(metricsData, pingData, isSmooth = false, isConne
     if (!pingData.value || pingData.value.length === 0) return {}
   
     const smoothVal = unref(isSmooth)
-    const hiddenVal = unref(isAllHidden)  // 🌟
+    const userSelected = unref(legendSelected)
   
     const series = pingData.value.map((task, index) => {
       const themeColor = PING_COLORS[index % PING_COLORS.length]
@@ -184,17 +184,25 @@ export function useChartOptions(metricsData, pingData, isSmooth = false, isConne
   
     const colors = pingData.value.map((_, i) => PING_COLORS[i % PING_COLORS.length])
     
-    // 🌟 构建 selected 状态
     const seriesNames = series.map(s => s.name)
-    const selected = Object.fromEntries(seriesNames.map(n => [n, !hiddenVal]))
+    const finalSelected = {}
+    let allHidden = true
+
+    seriesNames.forEach(name => {
+      finalSelected[name] = userSelected[name] !== false
+      if (finalSelected[name]) {
+        allHidden = false
+      }
+    })
   
-    return makeLineOption({
+    const baseOption = makeLineOption({
       series,
       yFormatter: v => v != null ? v.toFixed(0) + ' ms' : '',
       colors,
       showLegend: true,
-      legendSelected: selected  // 🌟 传入
+      legendSelected: finalSelected
     })
+    return baseOption
   })
 
   return { cpuOption, memOption, diskOption, netOption, connOption, procOption, pingSummaryData, mergedPingOption }

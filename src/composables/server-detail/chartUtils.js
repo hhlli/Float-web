@@ -61,6 +61,14 @@ export const makeLineOption = ({ title, series, yFormatter, yMax, colors, showLe
       left: 8, 
       containLabel: true 
     },
+    // 🌟 新增 dataZoom 属性
+    dataZoom: [
+      {
+        type: 'inside', // 设置为 inside 模式，支持移动端双指缩放和单指拖动，且不显示多余的 UI 滑块
+        xAxisIndex: 0,  // 绑定到 X 轴（时间轴）
+        filterMode: 'filter'
+      }
+    ],
     legend: {
       show: showLegend,
       bottom: 0,

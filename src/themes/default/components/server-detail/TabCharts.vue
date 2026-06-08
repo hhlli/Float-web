@@ -2,7 +2,7 @@
   <div class="charts-container">
     <div class="charts-controls">
       <div class="control-left">
-        <SlidingTabs 
+        <SwipePicker 
           size="small"
           v-model="activeRange"
           :options="timeRangeOptions" 
@@ -47,14 +47,13 @@
         :procOption="procOption"
       />
       <ViewNetwork
-  v-if="chartType === 'network'"
-  :pingSummaryData="pingSummaryData"
-  :mergedPingOption="mergedPingOption"
-  :pingRawData="pingData"
-  :isAllHidden="isAllHidden"
-  @toggle-legend="isAllHidden = !isAllHidden"
-  @legend-change="val => isAllHidden = val"
-/>
+        v-if="chartType === 'network'"
+        :pingSummaryData="pingSummaryData"
+        :mergedPingOption="mergedPingOption"
+        :pingRawData="pingData"
+        :legendSelected="legendSelected"
+        @update:legendSelected="val => legendSelected = val"
+      />
     </div>
   </div>
 </template>
@@ -65,6 +64,7 @@ import { useChartData } from '@/composables/server-detail/useChartData.js'
 import { useChartOptions } from '@/composables/server-detail/useChartOptions.js'
 import { loadTimeRanges, latencyTimeRanges } from '@/composables/server-detail/chartUtils.js'
 import SlidingTabs from '@/components/common/SlidingTabs.vue'
+import SwipePicker from '@/components/common/SwipePicker.vue'
 import ViewLoad from './ViewLoad.vue'
 import ViewNetwork from './ViewNetwork.vue'
 
@@ -103,8 +103,8 @@ const timeRangeOptions = computed(() => {
 const { metricsData, pingData, isLoading, hasData, currentCPU, fetchData, startPoll, stopPoll, reset } = useChartData(serverRef)
 
 // 🌟 将 isConnectNulls 作为第四个参数传入
-const isAllHidden = ref(false)
-const { cpuOption, memOption, diskOption, netOption, connOption, procOption, pingSummaryData, mergedPingOption } = useChartOptions(metricsData, pingData, false, isConnectNulls, isAllHidden)
+const legendSelected = ref({})
+const { cpuOption, memOption, diskOption, netOption, connOption, procOption, pingSummaryData, mergedPingOption } = useChartOptions(metricsData, pingData, false, isConnectNulls, legendSelected)
 
 watch(
   () => [activeRange.value, props.server?.node_id],
@@ -209,13 +209,21 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
   .charts-controls {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .control-right {
-    width: 100%;
+    flex-direction: row; /* 强制水平排列 */
+    align-items: center;
     justify-content: space-between;
+    gap: 8px; /* 缩小组件间距 */
+  }
+  
+  .control-right {
+    width: auto;
+    flex: 1; /* 占据剩余空间 */
+    justify-content: flex-end; /* 内容靠右对齐 */
+    gap: 10px;
+  }
+
+  .switch-label {
+    font-size: 12px; /* 移动端稍微缩小文字防止拥挤 */
   }
 }
 </style>
