@@ -13,13 +13,13 @@
           <table style="width: 100%; table-layout: auto; border-collapse: collapse;">
             <thead>
               <tr>
-                <th style="width: 20%; min-width: 160px;">名称</th>
-                <th style="width: 15%; min-width: 130px;">IP 地址</th>
-                <th style="width: 12%; min-width: 110px;">版本号</th>
-                <th style="width: 5%; min-width: 70px;">地区</th>
+                <th style="width: 20%; min-width: 150px;">名称</th>
+                <th style="width: 20%; min-width: 160px;">IP 地址</th>
+                <th style="width: 90px; min-width: 90px;">版本号</th>
+                <th style="width: 60px; min-width: 60px; text-align: center;">地区</th>
                 <th style="width: auto; min-width: 120px;">备注信息</th>
-                <th style="width: 12%; min-width: 100px;">到期日</th>
-                <th style="width: 15%; min-width: 180px; text-align: right; padding-right: 20px;">操作</th>
+                <th style="width: 100px; min-width: 100px;">到期日</th>
+                <th style="width: 180px; min-width: 180px; text-align: right; padding-right: 20px;">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +68,7 @@
                   </div>
                 </td>
                 
-                <td style="font-size: 16px; white-space: nowrap;" :title="s.region">{{ getFlagEmoji(s.region) }}</td>
+                <td style="font-size: 16px; white-space: nowrap; text-align: center;" :title="s.region">{{ getFlagEmoji(s.region) }}</td>
                 
                 <td style="color: var(--text-muted); font-size: 13px; line-height: 1.5;">{{ s.notes || '-' }}</td>
                 

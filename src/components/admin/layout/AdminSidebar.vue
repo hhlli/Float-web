@@ -27,13 +27,14 @@
           <svg v-if="!isCollapsed" class="chevron" :class="{ open: isNotifyOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
         <Transition name="expand">
-          <div class="sub-nav-grid" v-show="isNotifyOpen && !isCollapsed">
-            <div class="sub-nav">
-              <div :class="['nav-item-sub', { active: route.query.tab === 'notification' }]" @click="goTo('/admin/settings', 'notification')">通知设置</div>
-              <div :class="['nav-item-sub', { active: route.query.tab === 'notify' }]" @click="goTo('/admin/settings', 'notify')">通知规则</div>
-            </div>
-          </div>
-        </Transition>
+  <div class="sub-nav-grid" v-show="isNotifyOpen && !isCollapsed">
+    <div class="sub-nav">
+      <div :class="['nav-item-sub', { active: route.query.tab === 'notification' }]" @click="goTo('/admin/settings', 'notification')">通知设置</div>
+      <div :class="['nav-item-sub', { active: route.query.tab === 'notify' }]" @click="goTo('/admin/settings', 'notify')">通知规则</div>
+      <div :class="['nav-item-sub', { active: route.query.tab === 'integration' }]" @click="goTo('/admin/settings', 'integration')">集成设置</div>
+    </div>
+  </div>
+</Transition>
       </div>
 
       <div :class="['nav-item', { active: route.path.includes('/admin/latency') }]" @click="goTo('/admin/latency')" title="延迟监测">

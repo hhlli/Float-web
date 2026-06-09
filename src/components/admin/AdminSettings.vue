@@ -20,6 +20,7 @@ import { useRoute } from 'vue-router'
 import request from '@/utils/request.js' 
 import { showToast } from '@/utils/toast.js'
 import SessionSettings from './settings/SessionSettings.vue'
+import IntegrationSettings from './settings/IntegrationSettings.vue' // 新增引入
 
 // 导入子组件
 import AccountSettings from './settings/AccountSettings.vue'
@@ -40,7 +41,8 @@ const componentsMap = {
   notification: markRaw(NotificationSettings),
   notify: markRaw(NotifyAlerts),
   general: markRaw(GeneralSettings), // 新增此行
-  session: markRaw(SessionSettings) // 新增此行
+  session: markRaw(SessionSettings),// 新增此行
+  integration: markRaw(IntegrationSettings) // 新增映射
 }
 
 const activeComponent = computed(() => {
