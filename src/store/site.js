@@ -18,6 +18,7 @@ function compareVersions(v1, v2) {
 export const useSiteStore = defineStore('site', {
   state: () => ({
     theme: 'default',
+    themeConfig: {},
     settings: {},
     isFetched: false,
     hasUpdate: false
@@ -29,6 +30,18 @@ export const useSiteStore = defineStore('site', {
         const data = await request.get('/api/public/settings')
         this.settings = data || {}
         this.theme = data?.theme || 'default'
+
+        // 🌟 新增核心逻辑：安全解析透明透传的 JSON 字符串
+        try {
+          if (data?.theme_config) {
+            this.themeConfig = JSON.parse(data.theme_config)
+          } else {
+            this.themeConfig = {} // 兜底空对象
+          }
+        } catch (parseError) {
+          console.error('主题 JSON 配置解析失败，已重置为空对象', parseError)
+          this.themeConfig = {}
+        }
         
         // 计算是否有新版本
         const currentVersion = data?.server_version || ''

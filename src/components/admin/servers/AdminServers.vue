@@ -13,17 +13,18 @@
           <table style="width: 100%; table-layout: auto; border-collapse: collapse;">
             <thead>
               <tr>
-                <th style="width: 25%; min-width: 200px;">名称</th>
-                <th style="width: 18%; min-width: 140px;">IP 地址</th>
-                <th style="width: 10%; min-width: 80px;">地区</th>
-                <th style="width: auto; min-width: 120px;">配置信息 (备注)</th>
+                <th style="width: 20%; min-width: 160px;">名称</th>
+                <th style="width: 15%; min-width: 130px;">IP 地址</th>
+                <th style="width: 12%; min-width: 110px;">版本号</th>
+                <th style="width: 5%; min-width: 70px;">地区</th>
+                <th style="width: auto; min-width: 120px;">备注信息</th>
                 <th style="width: 12%; min-width: 100px;">到期日</th>
                 <th style="width: 15%; min-width: 180px; text-align: right; padding-right: 20px;">操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="serverStore.servers.length === 0">
-                <td colspan="6" style="text-align:center; padding: 40px 0; color: var(--text-muted);">
+                <td colspan="7" style="text-align:center; padding: 40px 0; color: var(--text-muted);">
                   {{ serverStore.loading ? '加载中...' : '暂无节点' }}
                 </td>
               </tr>
@@ -46,6 +47,25 @@
                 <td style="color: var(--text-muted); font-family: monospace; font-size: 12px; line-height: 1.5; white-space: nowrap;">
                   <div style="color: var(--text-main);">{{ s.ipv4 || '-' }}</div>
                   <div v-if="s.ipv6" style="opacity: 0.7; font-size: 11px;">{{ s.ipv6 }}</div>
+                </td>
+
+                <td style="color: var(--text-muted); font-size: 13px; white-space: nowrap;">
+                  <div class="version-wrapper">
+                    <span>{{ s.agent_version || '未知' }}</span>
+                    <span 
+                      v-if="hasUpdate(s.agent_version)" 
+                      class="update-indicator" 
+                      title="有新版本可用，点击获取部署命令"
+                      @click="openDeployModal(s)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      <span>{{ siteStore.latestVersion }}</span>
+                    </span>
+                  </div>
                 </td>
                 
                 <td style="font-size: 16px; white-space: nowrap;" :title="s.region">{{ getFlagEmoji(s.region) }}</td>
@@ -177,9 +197,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue' // 删除了多余的 onMounted, onUnmounted
+import { ref } from 'vue' 
 import request from '@/utils/request.js' 
 import { useServerStore } from '@/store/server.js'
+import { useSiteStore } from '@/store/site.js' // 引入全局 siteStore
 import { showToast } from '@/utils/toast.js' 
 
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -188,8 +209,27 @@ import DeployModal from './DeployModal.vue'
 import EditServerModal from './EditServerModal.vue'
 import TerminalModal from './TerminalModal.vue' 
 
-// 仅保留一次 Store 实例化
 const serverStore = useServerStore()
+const siteStore = useSiteStore() // 初始化 siteStore 实例
+
+// 版本比对逻辑
+const hasUpdate = (currentVersion) => {
+  const latest = siteStore.latestVersion
+  if (!currentVersion || !latest) return false
+
+  const v1 = currentVersion.replace(/^v/, '').split('.')
+  const v2 = latest.replace(/^v/, '').split('.')
+
+  const len = Math.max(v1.length, v2.length)
+  for (let i = 0; i < len; i++) {
+    const num1 = parseInt(v1[i] || '0', 10)
+    const num2 = parseInt(v2[i] || '0', 10)
+    
+    if (num1 < num2) return true
+    if (num1 > num2) return false
+  }
+  return false
+}
 
 const terminalVisible = ref(false)
 const currentTerminalNodeId = ref('')
@@ -253,7 +293,6 @@ const openEditModal = (s) => {
   showEditModal.value = true 
 }
 
-// 🌟 修复 1：编辑成功后调用新的精准合并方法
 const handleEditSuccess = async () => {
   await serverStore.fetchStaticServers(true);
   showToast('保存成功');
@@ -264,7 +303,6 @@ const confirmDeleteServer = (id) => {
   showDeleteModal.value = true 
 }
 
-// 🌟 修复 2：添加成功后调用新的精准合并方法
 const submitAddNode = async () => {
   const finalName = (newNode.value.name || '').trim() || generateShortName();
   
@@ -285,27 +323,25 @@ const submitAddNode = async () => {
     
     showToast('添加成功');
     showAddModal.value = false;
-    await serverStore.fetchStaticServers(true); // 更新视图
+    await serverStore.fetchStaticServers(true); 
   } catch (err) {
     showToast('添加失败', 'error');
     console.error("保存请求失败:", err);
   }
 }
 
-// 🌟 修复 3：删除成功后调用新的精准合并方法
 const executeDelete = async () => { 
   try {
     await request.delete('/api/admin/servers/delete', { params: { node_id: nodeToDelete.value } });
     showToast('删除成功');
     showDeleteModal.value = false; 
-    await serverStore.fetchStaticServers(true); // 更新视图
+    await serverStore.fetchStaticServers(true); 
   } catch (err) {
     showToast('删除失败', 'error');
     console.error("删除失败:", err);
   }
 }
 
-// 🌟 修复 4：隐藏状态切换成功后调用新的精准合并方法
 const toggleVisibility = async (s) => {
   const targetState = !s.is_hidden;
   const originalState = s.is_hidden;
@@ -318,7 +354,7 @@ const toggleVisibility = async (s) => {
     });
     
     showToast('状态更新成功');
-    await serverStore.fetchStaticServers(true); // 更新视图
+    await serverStore.fetchStaticServers(true); 
   } catch (err) {
     s.is_hidden = originalState;
     showToast('状态更新失败', 'error');
@@ -330,23 +366,20 @@ const openDeployModal = (s) => {
   selectedServer.value = { ...s }; 
   showDeployModal.value = true 
 }
-
-// 🌟 修复 5：彻底删除底部的 onMounted 和 onUnmounted 轮询挂载！
-// （因为 AdminView.vue 外层壳子已经全局建立好了 WebSocket，如果这里再调用会冲突死循环！）
 </script>
 
 <style scoped>
-
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* 优化移动端滚动体验 */
+  -webkit-overflow-scrolling: touch; 
 }
 
 table {
   table-layout: fixed;
   width: 100%;
 }
+
 .name-cell-wrapper {
   display: flex;
   align-items: center;
@@ -359,6 +392,7 @@ table {
   gap: 6px;
   justify-content: flex-end;
 }
+
 .uuid-code {
   font-family: monospace;
   background: var(--bg-color);
@@ -366,4 +400,27 @@ table {
   border-radius: 4px;
 }
 
+.version-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ea580c; 
+  background: #fff7ed;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.update-indicator:hover {
+  opacity: 0.8;
+}
 </style>
