@@ -1,6 +1,37 @@
 import { computed, unref, ref } from 'vue'
 import { makeLineOption, formatSpeed, isDarkMode } from './chartUtils.js'
 
+// 在文件顶部加入此函数
+const calculateEWMA = (dataPoints, alpha = 0.2) => {
+  const smoothed = []
+  let lastVal = null
+  
+  for (let i = 0; i < dataPoints.length; i++) {
+    const point = dataPoints[i]
+    const timestamp = point[0]
+    const yValue = point[1]
+
+    // 处理空值断点
+    if (yValue === null) {
+      smoothed.push([timestamp, null])
+      lastVal = null 
+      continue
+    }
+
+    if (lastVal === null) {
+      // 序列起点或断点后的第一个点，直接使用原值
+      lastVal = yValue
+      smoothed.push([timestamp, yValue])
+    } else {
+      // EWMA 核心计算
+      lastVal = alpha * yValue + (1 - alpha) * lastVal
+      smoothed.push([timestamp, parseFloat(lastVal.toFixed(2))])
+    }
+  }
+  return smoothed
+}
+
+
 const PING_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
 
 const COLORS = {
@@ -172,11 +203,14 @@ export function useChartOptions(metricsData, pingData, isSmooth = false, isConne
     const series = pingData.value.map((task, index) => {
       const themeColor = PING_COLORS[index % PING_COLORS.length]
       const resolvedName = task.node_name || (task.rows && task.rows.length > 0 ? task.rows[0].node_name : '') || task.target || '延迟'
+      const baseData = task.rows ? task.rows.map(r => [r.timestamp * 1000, (r.ping_ms ?? r.latency_ms) == null ? null : (r.ping_ms ?? r.latency_ms)]) : []
+
+      const chartData = smoothVal ? calculateEWMA(baseData, 0.1) : baseData
       return {
         name: resolvedName,
-        data: task.rows ? task.rows.map(r => [r.timestamp * 1000, (r.ping_ms ?? r.latency_ms) == null ? null : (r.ping_ms ?? r.latency_ms)]) : [],
+        data: chartData,
         color: themeColor,
-        smooth: smoothVal,
+        smooth: false, 
         fill: false,
         connectNulls: false
       }

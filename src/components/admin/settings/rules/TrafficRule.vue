@@ -40,51 +40,44 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import request from '@/utils/request.js'
+import { ref, computed, watchEffect } from 'vue'
 import { showToast } from '@/utils/toast.js'
-import { useServerStore } from '@/store/server.js' // 🌟 引入 Store
+import { useServerStore } from '@/store/server.js'
+import { useSettingsStore } from '@/store/settings.js'
 import BaseToggle from '@/components/common/BaseToggle.vue'
 import BaseNumberGroup from '@/components/common/BaseNumberGroup.vue'
 import BaseSaveButton from '@/components/common/BaseSaveButton.vue'
 
 const serverStore = useServerStore()
-// 🌟 统一数据流
 const servers = computed(() => serverStore.servers)
 
+const settingsStore = useSettingsStore()
 const isSaving = ref(false)
 const trafficRule = ref({ enabled: false, default_threshold: 80, overrides: {} })
 
 const isOnline = (s) => s.last_active && (Date.now() / 1000 - s.last_active) < 60
 
-const fetchSettings = async () => {
-  try {
-    const data = await request.get('/api/admin/settings/get')
-    if (data && data.traffic_rule) {
-      try { 
-        const parsed = JSON.parse(data.traffic_rule)
-        trafficRule.value = {
-          enabled: parsed.enabled || false,
-          default_threshold: parsed.default_threshold || parsed.threshold || 80,
-          overrides: parsed.overrides || {}
-        }
-      } catch {}
-    }
-  } catch (e) {
-    console.error(e)
+watchEffect(() => {
+  const data = settingsStore.config
+  if (data && data.traffic_rule) {
+    try { 
+      const parsed = JSON.parse(data.traffic_rule)
+      trafficRule.value = {
+        enabled: parsed.enabled || false,
+        default_threshold: parsed.default_threshold || parsed.threshold || 80,
+        overrides: parsed.overrides || {}
+      }
+    } catch {}
   }
-}
+})
 
 const saveData = async () => {
   isSaving.value = true
-  
-  // 🌟 自清洗逻辑
   const validIds = new Set(servers.value.map(s => s.node_id))
   const cleanOverrides = {}
   
   for (const key in trafficRule.value.overrides) {
     const val = trafficRule.value.overrides[key]
-    // 过滤掉不在列表里的幽灵 ID
     if (validIds.has(key) && val !== '' && val !== null && val !== undefined) {
       cleanOverrides[key] = Number(val)
     }
@@ -97,11 +90,10 @@ const saveData = async () => {
   }
 
   try {
-    await request.post('/api/admin/settings/update', { 
+    await settingsStore.updateSettings({ 
       traffic_rule: JSON.stringify(payload) 
     })
     showToast('保存成功', 'success')
-    await fetchSettings()
   } catch (e) {
     showToast('保存失败', 'error')
     console.error(e)
@@ -109,10 +101,6 @@ const saveData = async () => {
     isSaving.value = false
   }
 }
-
-onMounted(async () => {
-  await fetchSettings()
-})
 </script>
 
 <style scoped>

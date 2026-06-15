@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: ['.trycloudflare.com'], // 新增：允许所有 Cloudflare 临时子域名访问
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

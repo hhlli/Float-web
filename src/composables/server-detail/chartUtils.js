@@ -25,18 +25,21 @@ export const loadTimeRanges = [
   { key: '6h',       label: '6 小时' },
   { key: '1d',       label: '1 天' },
   { key: '7d',       label: '7 天' },
-  { key: '720h',     label: '720 小时' },
+  { key: '720h',     label: '30 天' },
 ]
 
 export const latencyTimeRanges = [
-  { key: '1h', label: '1 小时' },
-  { key: '6h', label: '6 小时' },
-  { key: '1d', label: '1 天' }, 
+  { key: '1h',  label: '1 小时' },
+  { key: '3h',  label: '3 小时' }, // 🌟 新增 3h 选项
+  { key: '6h',  label: '6 小时' },
+  { key: '12h', label: '12 小时' }, // 🌟 新增 12h 选项
+  { key: '1d',  label: '1 天' },
 ]
 
 export const rangeToSeconds = {
   realtime: 5 * 60,
   '1h':     3600,
+  '3h':     3 * 3600, // 🌟 新增 3h 到秒数的映射
   '6h':     6 * 3600,
   '12h':    12 * 3600,
   '24h':    86400, 

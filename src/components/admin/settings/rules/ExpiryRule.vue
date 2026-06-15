@@ -21,40 +21,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import request from '@/utils/request.js'
+import { ref, watchEffect } from 'vue'
 import { showToast } from '@/utils/toast.js'
+import { useSettingsStore } from '@/store/settings.js'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseNumberGroup from '@/components/common/BaseNumberGroup.vue'
 import BaseSaveButton from '@/components/common/BaseSaveButton.vue'
 import BaseToggle from '@/components/common/BaseToggle.vue'
 
+const settingsStore = useSettingsStore()
 const isSaving = ref(false)
 const expiryRule = ref({ enabled: false, days_before: 7 })
 
-const fetchSettings = async () => {
-  try {
-    const data = await request.get('/api/admin/settings/get')
-    if (data && data.expiry_rule) {
-      try { 
-        expiryRule.value = JSON.parse(data.expiry_rule) 
-      } catch (e) {
-        console.error("解析过期规则配置失败", e)
-      }
+watchEffect(() => {
+  const data = settingsStore.config
+  if (data && data.expiry_rule) {
+    try { 
+      expiryRule.value = JSON.parse(data.expiry_rule) 
+    } catch (e) {
+      console.error("解析过期规则配置失败", e)
     }
-  } catch (e) { 
-    console.error(e) 
   }
-}
+})
 
 const saveData = async () => {
   isSaving.value = true
   try {
-    await request.post('/api/admin/settings/update', { 
+    await settingsStore.updateSettings({ 
       expiry_rule: JSON.stringify(expiryRule.value) 
     })
     showToast('保存成功', 'success')
-    await fetchSettings()
   } catch (e) { 
     showToast('保存失败', 'error') 
     console.error(e)
@@ -62,8 +58,6 @@ const saveData = async () => {
     isSaving.value = false
   }
 }
-
-onMounted(() => fetchSettings())
 </script>
 
 <style scoped>

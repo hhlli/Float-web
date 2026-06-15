@@ -75,6 +75,12 @@ const router = createRouter({
           meta: { title: '系统设置' }
         },
         {
+          path: 'extensions', 
+          name: 'AdminExtensions',
+          component: () => import('../components/admin/extensions/AdminExtensions.vue'),
+          meta: { title: '拓展管理' }
+        },
+        {
           path: 'theme', 
           name: 'AdminTheme',
           component: () => import('../components/admin/AdminTheme.vue'),

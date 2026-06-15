@@ -9,10 +9,10 @@
         />
       </div>
       <div class="control-right">
-        <div v-if="chartType === 'load'" class="switch-container">
-          <span class="switch-label">连接空值</span>
+        <div class="switch-container">
+          <span class="switch-label">{{ chartType === 'load' ? '连接空值' : '平滑曲线' }}</span>
           <label class="toggle-switch">
-            <input type="checkbox" v-model="isConnectNulls">
+            <input type="checkbox" v-model="currentToggleValue">
             <span class="slider"></span>
           </label>
         </div>
@@ -75,8 +75,20 @@ const props = defineProps({
 const chartType    = ref('load')
 const loadRange = ref('realtime')
 const latencyRange = ref('1h')
-const isConnectNulls = ref(false) // 🌟 新增：连接空值状态，默认 false（断开）
+const isConnectNulls = ref(false)
+const isSmooth = ref(false)
 const serverRef    = toRef(props, 'server')
+
+const currentToggleValue = computed({
+  get: () => chartType.value === 'load' ? isConnectNulls.value : isSmooth.value,
+  set: (val) => {
+    if (chartType.value === 'load') {
+      isConnectNulls.value = val
+    } else {
+      isSmooth.value = val
+    }
+  }
+})
 
 const activeRange = computed({
   get: () => chartType.value === 'load' ? loadRange.value : latencyRange.value,
@@ -104,7 +116,7 @@ const { metricsData, pingData, isLoading, hasData, currentCPU, fetchData, startP
 
 // 🌟 将 isConnectNulls 作为第四个参数传入
 const legendSelected = ref({})
-const { cpuOption, memOption, diskOption, netOption, connOption, procOption, pingSummaryData, mergedPingOption } = useChartOptions(metricsData, pingData, false, isConnectNulls, legendSelected)
+const { cpuOption, memOption, diskOption, netOption, connOption, procOption, pingSummaryData, mergedPingOption } = useChartOptions(metricsData, pingData, isSmooth, isConnectNulls, legendSelected)
 
 watch(
   () => [activeRange.value, props.server?.node_id],

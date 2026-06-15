@@ -55,18 +55,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import request from '@/utils/request.js'
+import { ref, computed, watchEffect } from 'vue'
 import { showToast } from '@/utils/toast.js'
-import { useServerStore } from '@/store/server.js' // 🌟 引入 Store
+import { useServerStore } from '@/store/server.js'
+import { useSettingsStore } from '@/store/settings.js'
 import BaseToggle from '@/components/common/BaseToggle.vue'
 import BaseNumberGroup from '@/components/common/BaseNumberGroup.vue'
 import BaseSaveButton from '@/components/common/BaseSaveButton.vue'
 
 const serverStore = useServerStore()
-// 🌟 统一使用 Store，消灭组件内的冗余 HTTP 请求
 const servers = computed(() => serverStore.servers)
 
+const settingsStore = useSettingsStore()
 const isSaving = ref(false)
 const loadRule = ref({ 
   enabled: false, 
@@ -79,37 +79,30 @@ const loadRule = ref({
 
 const isOnline = (s) => s.last_active && (Date.now() / 1000 - s.last_active) < 60
 
-const fetchSettings = async () => {
-  try {
-    const data = await request.get('/api/admin/settings/get')
-    if (data && data.load_rule) {
-      try { 
-        const parsed = JSON.parse(data.load_rule)
-        loadRule.value = {
-          enabled: parsed.enabled || false,
-          default_cpu_threshold: parsed.default_cpu_threshold || parsed.cpu_threshold || 90,
-          default_mem_threshold: parsed.default_mem_threshold || parsed.mem_threshold || 90,
-          default_duration: parsed.default_duration || parsed.duration || 5,
-          cpu_overrides: parsed.cpu_overrides || {},
-          mem_overrides: parsed.mem_overrides || {}
-        }
-      } catch {}
-    }
-  } catch (e) {
-    console.error(e)
+watchEffect(() => {
+  const data = settingsStore.config
+  if (data && data.load_rule) {
+    try { 
+      const parsed = JSON.parse(data.load_rule)
+      loadRule.value = {
+        enabled: parsed.enabled || false,
+        default_cpu_threshold: parsed.default_cpu_threshold || parsed.cpu_threshold || 90,
+        default_mem_threshold: parsed.default_mem_threshold || parsed.mem_threshold || 90,
+        default_duration: parsed.default_duration || parsed.duration || 5,
+        cpu_overrides: parsed.cpu_overrides || {},
+        mem_overrides: parsed.mem_overrides || {}
+      }
+    } catch {}
   }
-}
+})
 
 const saveData = async () => {
   isSaving.value = true
-  
-  // 🌟 脏数据清洗机制：获取所有真实节点ID
   const validIds = new Set(servers.value.map(s => s.node_id))
 
   const cleanCpuOverrides = {}
   for (const key in loadRule.value.cpu_overrides) {
     const val = loadRule.value.cpu_overrides[key]
-    // 只有真实存在的节点才会保存进去
     if (validIds.has(key) && val !== '' && val !== null && val !== undefined) {
       cleanCpuOverrides[key] = Number(val)
     }
@@ -133,11 +126,10 @@ const saveData = async () => {
   }
 
   try {
-    await request.post('/api/admin/settings/update', { 
+    await settingsStore.updateSettings({ 
       load_rule: JSON.stringify(payload) 
     })
     showToast('保存成功', 'success')
-    await fetchSettings()
   } catch (e) {
     showToast('保存失败', 'error')
     console.error(e)
@@ -145,10 +137,6 @@ const saveData = async () => {
     isSaving.value = false
   }
 }
-
-onMounted(async () => {
-  await fetchSettings()
-})
 </script>
 
 <style scoped>

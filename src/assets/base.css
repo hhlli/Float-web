@@ -129,3 +129,13 @@
   .modal-card .info-row:last-child { margin-bottom: 0; }
   .modal-card .info-row .label { color: var(--text-muted); }
   .modal-card .info-row .value { color: var(--text-main); font-weight: 500; }
+  /* --- 全局 Vue 过渡动画 (fade) --- */
+.fade-enter-active, 
+.fade-leave-active { 
+  transition: opacity 0.2s ease, transform 0.2s ease; 
+}
+.fade-enter-from, 
+.fade-leave-to { 
+  opacity: 0; 
+  transform: translateY(10px); 
+}

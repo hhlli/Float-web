@@ -16,11 +16,14 @@
           </div>
         </div>
 
-        <div class="tab-content">
+        <div class="tab-content" v-if="settingsStore.config">
           <OfflineRule v-if="activeTab === 'offline'" />
           <LoadRule v-if="activeTab === 'load'" />
           <TrafficRule v-if="activeTab === 'traffic'" />
           <ExpiryRule v-if="activeTab === 'expiry'" />
+        </div>
+        <div v-else class="tab-content" style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px 0;">
+          加载配置中...
         </div>
       </div>
       
@@ -29,12 +32,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useSettingsStore } from '@/store/settings.js'
 import OfflineRule from './rules/OfflineRule.vue'
 import LoadRule from './rules/LoadRule.vue'
 import TrafficRule from './rules/TrafficRule.vue'
 import ExpiryRule from './rules/ExpiryRule.vue'
 
+const settingsStore = useSettingsStore()
 const activeTab = ref('offline')
 
 const tabs = [
@@ -43,6 +48,10 @@ const tabs = [
   { key: 'traffic', label: '流量通知' },
   { key: 'expiry', label: '过期提醒' }
 ]
+
+onMounted(() => {
+  settingsStore.fetchSettings()
+})
 </script>
 
 <style scoped>

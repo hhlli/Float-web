@@ -121,8 +121,8 @@ const networkStats = computed(() => {
   return props.pingSummaryData.map(item => {
     const raw = props.pingRawData.find(r => r.target === item.target)
     const rows = raw?.rows || []
-
-    const validRows = rows.filter(r => (r.ping_ms ?? r.latency_ms) != null)
+    
+    const validRows = rows.filter(r => (r.ping_ms ?? r.latency_ms) != null && r.type !== 'MTR')
     const count = validRows.length
 
     let latest = 0, avg = 0, min = 0, max = 0, jitter = 0, p50 = 0, p99 = 0, loss = 0

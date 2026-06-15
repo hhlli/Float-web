@@ -60,6 +60,15 @@
         </Transition>
       </div>
       
+      <div :class="['nav-item', { active: route.path.includes('/admin/extensions') }]" @click="goTo('/admin/extensions')" title="拓展管理">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        <span class="nav-text">拓展管理</span>
+      </div>
+      
       <div :class="['nav-item', { active: route.path.includes('/admin/theme') }]" @click="goTo('/admin/theme')" title="主题外观">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="13.5" cy="6.5" r=".5"></circle>
@@ -187,6 +196,8 @@ const handleLogout = () => {
 <style scoped>
 .sidebar-header {
   white-space: nowrap;
+  /* 新增：头部固定 */
+  flex-shrink: 0; 
 }
 
 .header-text {
@@ -205,6 +216,11 @@ const handleLogout = () => {
   transition: width 0.25s ease, min-width 0.25s ease;
   width: 220px; 
   min-width: 220px;
+  /* 新增：开启整体 Flex 布局并锁定高度 */
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* 确保填满外层卡片的高度 */
+  overflow: hidden; /* 防止内部元素撑破侧边栏圆角 */
 }
 
 .sidebar.collapsed {
@@ -298,5 +314,24 @@ const handleLogout = () => {
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
+}
+.sidebar-nav {
+  /* 新增以下布局逻辑 */
+  flex: 1; /* 占据头部以下的全部剩余空间 */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* 菜单过多时仅在此区域内滚动 */
+  padding-bottom: 24px; /* 底部预留安全距离，避免贴边 */
+  
+  /* 可选：隐藏滚动条让 UI 更干净 (保留滚动功能) */
+  scrollbar-width: none; /* Firefox */
+}
+.sidebar-nav::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
+}
+
+/* 确保最底部的退出按钮不会被压缩 */
+.nav-danger {
+  flex-shrink: 0;
 }
 </style>

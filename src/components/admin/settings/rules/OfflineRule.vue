@@ -31,18 +31,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import request from '@/utils/request.js'
+import { ref, computed, watchEffect } from 'vue'
 import { showToast } from '@/utils/toast.js'
-import { useServerStore } from '@/store/server.js' // 🌟 引入 Store
+import { useServerStore } from '@/store/server.js'
+import { useSettingsStore } from '@/store/settings.js'
 import BaseToggle from '@/components/common/BaseToggle.vue'
 import BaseNumberGroup from '@/components/common/BaseNumberGroup.vue'
 import BaseSaveButton from '@/components/common/BaseSaveButton.vue'
 
 const serverStore = useServerStore()
-// 🌟 直接从 Store 中获取响应式的服务器列表
 const servers = computed(() => serverStore.servers)
 
+const settingsStore = useSettingsStore()
 const isSaving = ref(false)
 const offlineRules = ref({})
 
@@ -58,31 +58,25 @@ const isOnline = (s) => {
   return (Date.now() / 1000 - s.last_active) < threshold
 }
 
-const fetchSettings = async () => {
-  try {
-    const data = await request.get('/api/admin/settings/get')
-    if (data) {
-      if (data.offline_rules) {
-        try { offlineRules.value = JSON.parse(data.offline_rules) } catch {}
-      }
-      globalSettings.value.notify_offline_enable = data.notify_offline_enable === 'true'
-      if (data.offline_threshold) globalSettings.value.offline_threshold = parseInt(data.offline_threshold)
-      if (data.offline_cooldown) globalSettings.value.offline_cooldown = parseInt(data.offline_cooldown)
-      
-      // 补充缺失的节点配置
-      servers.value.forEach(s => {
-        if (offlineRules.value[s.node_id] === undefined) offlineRules.value[s.node_id] = true
-      })
+watchEffect(() => {
+  const data = settingsStore.config
+  if (data) {
+    if (data.offline_rules) {
+      try { offlineRules.value = JSON.parse(data.offline_rules) } catch {}
     }
-  } catch (e) {
-    console.error(e)
+    globalSettings.value.notify_offline_enable = data.notify_offline_enable === 'true'
+    if (data.offline_threshold) globalSettings.value.offline_threshold = parseInt(data.offline_threshold)
+    if (data.offline_cooldown) globalSettings.value.offline_cooldown = parseInt(data.offline_cooldown)
+    
+    servers.value.forEach(s => {
+      if (offlineRules.value[s.node_id] === undefined) offlineRules.value[s.node_id] = true
+    })
   }
-}
+})
 
 const saveData = async () => {
   isSaving.value = true
   try {
-    // 🌟 脏数据清洗逻辑：只保留当前实际存在的节点
     const validIds = new Set(servers.value.map(s => s.node_id))
     const cleanOfflineRules = {}
     for (const key in offlineRules.value) {
@@ -92,14 +86,13 @@ const saveData = async () => {
     }
 
     const payload = {
-      offline_rules: JSON.stringify(cleanOfflineRules), // 提交干净的数据
+      offline_rules: JSON.stringify(cleanOfflineRules),
       notify_offline_enable: globalSettings.value.notify_offline_enable ? 'true' : 'false',
       offline_threshold: globalSettings.value.offline_threshold.toString(),
       offline_cooldown: globalSettings.value.offline_cooldown.toString()
     }
-    await request.post('/api/admin/settings/update', payload)
+    await settingsStore.updateSettings(payload)
     showToast('保存成功', 'success')
-    await fetchSettings()
   } catch (e) {
     showToast('保存失败', 'error')
     console.error(e)
@@ -107,10 +100,6 @@ const saveData = async () => {
     isSaving.value = false
   }
 }
-
-onMounted(async () => {
-  await fetchSettings()
-})
 </script>
 
 <style scoped>
