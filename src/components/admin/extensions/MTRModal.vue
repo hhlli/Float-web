@@ -172,19 +172,29 @@ const startPolling = (target) => {
   
   pollInterval = setInterval(async () => {
     try {
-      const res = await request.get('/api/admin/mtr/result', {
-        params: { node_id: form.value.node_id, target: target }
-      })
-      
-      // 调整点：读取 res.data.hops 数组
-      if (res && res.status === 'success' && res.data && Array.isArray(res.data.hops)) {
-        resultData.value = res.data.hops
-        lastUpdateTime.value = new Date(res.timestamp * 1000).toLocaleString()
-        statusText.value = '' 
-        isRunning.value = false
-        clearInterval(pollInterval)
-      }
-    } catch (err) {
+  const res = await request.get('/api/admin/mtr/result', {
+    params: { node_id: form.value.node_id, target: target }
+  })
+  
+  if (res && res.status === 'success' && res.data) {
+    // 优先拦截并处理探针或插件显式回传的错误，阻止轮询无休止挂起
+    if (res.data.error) {
+      statusText.value = `诊断失败: ${res.data.error}`
+      isRunning.value = false
+      clearInterval(pollInterval)
+      return
+    }
+
+    // 解析正常的跳数路由数据
+    if (Array.isArray(res.data.hops)) {
+      resultData.value = res.data.hops
+      lastUpdateTime.value = new Date(res.timestamp * 1000).toLocaleString()
+      statusText.value = '' 
+      isRunning.value = false
+      clearInterval(pollInterval)
+    }
+  }
+} catch (err) {
       clearInterval(pollInterval)
       isRunning.value = false
       statusText.value = '获取结果异常或超时中断。'
