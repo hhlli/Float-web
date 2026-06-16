@@ -78,17 +78,18 @@ import request from '@/utils/request.js'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useServerStore } from '@/store/server.js'
 
-const props = defineProps({ show: Boolean })
+const props = defineProps({ 
+  show: Boolean,
+  installedNodes: {
+    type: Array,
+    default: () => []
+  }
+})
 const emit = defineEmits(['close'])
 
 const serverStore = useServerStore()
 
-const form = ref({ 
-  node_id: '', 
-  target_select: '', 
-  target_manual: '' 
-})
-
+const form = ref({ node_id: '', target_select: '', target_manual: '' })
 const isRunning = ref(false)
 const statusText = ref('')
 const resultData = ref([])
@@ -96,9 +97,16 @@ const lastUpdateTime = ref('')
 const targetOptions = ref([])
 let pollInterval = null
 
+// 核心拦截逻辑：过滤出既"在线"又"已安装该插件"的服务器
 const onlineServers = computed(() => {
   const now = Date.now() / 1000
-  return serverStore.servers.filter(s => (now - s.last_active < 180))
+  const installedSet = new Set(props.installedNodes)
+  
+  return serverStore.servers.filter(s => {
+    const isOnline = (now - s.last_active < 180)
+    const isInstalled = installedSet.has(s.node_id)
+    return isOnline && isInstalled
+  })
 })
 
 const finalTarget = computed(() => {

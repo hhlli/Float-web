@@ -21,47 +21,37 @@
             </thead>
             <tbody>
               <tr v-if="extensions.length === 0">
-                <td colspan="5" class="empty-cell">
-                  暂无可用插件
-                </td>
+                <td colspan="5" class="empty-cell">暂无可用插件</td>
               </tr>
               
               <tr v-for="ext in extensions" :key="ext.id">
-                <td class="task-name">
-                  {{ ext.name }}
-                </td>
+                <td class="task-name">{{ ext.name }}</td>
                 <td>
-                  <span v-if="ext.installed" class="badge active">已安装</span>
+                  <span v-if="ext.installed_nodes && ext.installed_nodes.length > 0" class="badge active">
+                    已安装 ({{ ext.installed_nodes.length }} 节点)
+                  </span>
                   <span v-else class="badge inactive">未安装</span>
                 </td>
-                <td class="plugin-desc" :title="ext.description">
-                  {{ ext.description }}
-                </td>
-                <td class="task-interval">
-                  {{ ext.version || '-' }}
-                </td>
+                <td class="plugin-desc" :title="ext.description">{{ ext.description }}</td>
+                <td class="task-interval">{{ ext.version || '-' }}</td>
                 <td class="col-actions">
                   <div class="action-buttons">
                     <button 
-                      v-if="ext.installed && ext.id === 'mtr-plugin'"
+                      v-if="ext.installed_nodes && ext.installed_nodes.length > 0 && ext.id === 'mtr-plugin'"
                       class="action-btn-icon play" 
                       title="运行诊断" 
-                      @click="showMtrModal = true"
+                      @click="openMtrModal(ext.installed_nodes)"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     </button>
 
-                    <button 
-                      v-if="!ext.installed"
-                      class="btn-outline btn-sm btn-action" 
-                      @click="installExtension(ext.id)"
-                    >
-                      安装
+                    <button class="btn-outline btn-sm btn-action" @click="openNodeSelectModal(ext, 'install')">
+                      部署
                     </button>
                     <button 
-                      v-if="ext.installed"
+                      v-if="ext.installed_nodes && ext.installed_nodes.length > 0"
                       class="btn-outline btn-sm btn-danger" 
-                      @click="confirmUninstall(ext.id)"
+                      @click="openNodeSelectModal(ext, 'uninstall')"
                     >
                       卸载
                     </button>
@@ -73,96 +63,124 @@
         </div>
       </div>
     </div>
-    <MTRModal :show="showMtrModal" @close="showMtrModal = false" />
 
-    <BaseModal :show="showDeleteModal" title="确认卸载插件" @close="showDeleteModal = false">
-      <div class="delete-confirm-box">
-        <div class="warning-icon-wrapper">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="warning-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <MTRModal 
+      :show="showMtrModal" 
+      :installed-nodes="currentMtrNodes" 
+      @close="showMtrModal = false" 
+    />
+
+    <BaseModal :show="showNodeModal" :title="nodeModalTitle" @close="showNodeModal = false">
+      <div class="node-list-container">
+        <div v-if="filteredServers.length === 0" class="empty-text">
+          没有可操作的服务器节点
         </div>
-        <p class="delete-text">确定要卸载插件 <strong>{{ extToDelete }}</strong> 吗？</p>
+        <div v-for="server in filteredServers" :key="server.node_id" class="node-checkbox-item">
+          <label class="checkbox-label">
+            <input type="checkbox" :value="server.node_id" v-model="selectedNodes" />
+            <span class="node-name">{{ server.name }}</span>
+            <span class="node-status" :class="{'online': isOnline(server)}">
+              {{ isOnline(server) ? '在线' : '离线' }}
+            </span>
+          </label>
+        </div>
       </div>
       <template #footer>
-        <button class="btn-outline" @click="showDeleteModal = false">取消</button>
-        <button class="btn-danger-solid" @click="executeUninstall">确认卸载</button>
+        <button class="btn-outline" @click="showNodeModal = false">取消</button>
+        <button 
+          :class="actionType === 'install' ? 'btn-primary' : 'btn-danger-solid'" 
+          @click="executeAction"
+          :disabled="selectedNodes.length === 0"
+        >
+          {{ actionType === 'install' ? '确认部署' : '确认卸载' }}
+        </button>
       </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import request from '@/utils/request.js'
 import { showToast } from '@/utils/toast.js'
-import BaseModal from '@/components/common/BaseModal.vue' // 引入基础弹窗组件
+import BaseModal from '@/components/common/BaseModal.vue'
 import MTRModal from './MTRModal.vue'
+import { useServerStore } from '@/store/server.js'
 
+const serverStore = useServerStore()
+
+const extensions = ref([])
 const showMtrModal = ref(false)
-const showDeleteModal = ref(false)
-const extToDelete = ref(null)
+const currentMtrNodes = ref([])
 
-const extensions = ref([
-  {
-    id: 'mtr-plugin',
-    name: 'MTR 路由追踪',
-    description: '提供从探针节点到目标 IP 的全链路 MTR 路由追踪诊断能力。',
-    version: 'v1.0.0',
-    installed: false
+const showNodeModal = ref(false)
+const actionType = ref('install')
+const targetExtension = ref(null)
+const selectedNodes = ref([])
+
+const nodeModalTitle = computed(() => {
+  return actionType.value === 'install' ? '选择部署节点' : '选择卸载节点'
+})
+
+// 根据操作类型过滤显示的服务器
+const filteredServers = computed(() => {
+  if (!targetExtension.value) return []
+  const installedSet = new Set(targetExtension.value.installed_nodes || [])
+  
+  if (actionType.value === 'install') {
+    // 部署：仅显示未安装的节点
+    return serverStore.servers.filter(s => !installedSet.has(s.node_id))
+  } else {
+    // 卸载：仅显示已安装的节点
+    return serverStore.servers.filter(s => installedSet.has(s.node_id))
   }
-])
+})
+
+const isOnline = (server) => {
+  return (Date.now() / 1000 - server.last_active < 180)
+}
 
 const loadExtensions = async () => {
   try {
     const data = await request.get('/api/admin/extensions/list')
-    let remoteList = []
-    if (Array.isArray(data)) {
-      remoteList = data
-    } else if (data && Array.isArray(data.data)) {
-      remoteList = data.data
-    } else if (typeof data === 'string') {
-      try { remoteList = JSON.parse(data) } catch (e) { remoteList = [] }
-    }
-
-    if (remoteList && remoteList.length > 0) {
-      extensions.value.forEach(localExt => {
-        const remoteExt = remoteList.find(r => r.id === localExt.id)
-        if (remoteExt) {
-          localExt.installed = remoteExt.installed
-        }
-      })
-    }
+    extensions.value = Array.isArray(data) ? data : (data?.data || [])
   } catch (e) {
-    console.error('获取插件列表失败:', e)
+    showToast('获取插件状态失败', 'error')
   }
 }
 
-const installExtension = async (id) => {
-  try {
-    await request.post('/api/admin/extensions/install', { id })
-    showToast('插件安装指令已下发', 'success')
-    loadExtensions()
-  } catch (e) {
-    showToast('安装失败', 'error')
+const openMtrModal = (installedNodes) => {
+  currentMtrNodes.value = installedNodes
+  showMtrModal.value = true
+}
+
+const openNodeSelectModal = (ext, action) => {
+  targetExtension.value = ext
+  actionType.value = action
+  selectedNodes.value = []
+  
+  if (serverStore.servers.length === 0) {
+    serverStore.fetchStaticServers()
   }
+  
+  showNodeModal.value = true
 }
 
-const confirmUninstall = (id) => {
-  extToDelete.value = id
-  showDeleteModal.value = true
-}
-
-const executeUninstall = async () => {
-  if (!extToDelete.value) return
+const executeAction = async () => {
+  if (selectedNodes.value.length === 0) return
+  
+  const endpoint = actionType.value === 'install' ? '/api/admin/extensions/install' : '/api/admin/extensions/uninstall'
   
   try {
-    await request.post('/api/admin/extensions/uninstall', { id: extToDelete.value })
-    showToast('已卸载', 'success')
+    await request.post(endpoint, { 
+      id: targetExtension.value.id,
+      target_nodes: selectedNodes.value
+    })
+    showToast('指令已下发', 'success')
+    showNodeModal.value = false
     loadExtensions()
   } catch (e) {
     showToast('操作失败', 'error')
-  } finally {
-    showDeleteModal.value = false
-    extToDelete.value = null
   }
 }
 
@@ -172,78 +190,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 继承原有基础样式，新增节点选择列表样式 */
 .view-section { width: 100%; }
-
-.flex-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
+.flex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-title { margin-bottom: 0; }
-
 .table-responsive { width: 100%; overflow-x: auto; }
-.table-responsive table {
-  min-width: max-content;
-}
-
-.task-name, .task-interval, .col-actions {
-  white-space: nowrap;
-}
+.table-responsive table { min-width: max-content; }
+.task-name, .task-interval, .col-actions { white-space: nowrap; }
 .empty-cell { text-align: center; color: var(--text-muted); padding: 40px 0; }
-
 .task-name { font-weight: 500; }
 .plugin-desc { color: var(--text-muted); font-size: 13px; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.task-interval { color: var(--text-muted); font-size: 13px; }
 .col-actions { text-align: right; padding-right: 20px; }
 
 .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;}
 .badge.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 .badge.inactive { background: rgba(100, 116, 139, 0.15); color: #64748b; }
 
-.action-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.btn-sm { 
-  padding: 4px 12px; 
-  font-size: 12px; 
-  cursor: pointer; 
-  border-radius: 4px;
-  transition: background 0.2s;
-}
+.action-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-sm { padding: 4px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
 .btn-outline { background: transparent; }
-
 .btn-action { color: #3b82f6; border: 1px solid #3b82f6; }
 .btn-action:hover { background: rgba(59, 130, 246, 0.1); }
-
 .btn-danger { color: #ef4444; border: 1px solid #ef4444; }
 .btn-danger:hover { background: rgba(239, 68, 68, 0.1); }
-
-.action-btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  background: transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-  padding: 4px;
-}
+.action-btn-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: none; background: transparent; border-radius: 4px; cursor: pointer; padding: 4px; }
 .action-btn-icon svg { width: 14px; height: 14px; }
 .action-btn-icon.play { color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
-.action-btn-icon.play:hover { background: rgba(16, 185, 129, 0.1); }
 
-/* 卸载确认弹窗样式 */
-.delete-confirm-box { text-align: center; padding: 10px 0; }
-.warning-icon-wrapper { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #fef2f2; color: #ef4444; margin-bottom: 8px; }
-.warning-svg { width: 24px; height: 24px; }
-.delete-text { margin-top: 16px; color: var(--text-main); font-size: 15px; }
-.btn-danger-solid { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
-.btn-danger-solid:hover { background: #dc2626; }
+.node-list-container { max-height: 300px; overflow-y: auto; padding: 10px 0; }
+.empty-text { text-align: center; color: var(--text-muted); font-size: 13px; }
+.node-checkbox-item { margin-bottom: 12px; }
+.checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--text-main); }
+.node-status { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: rgba(100, 116, 139, 0.1); color: #64748b; }
+.node-status.online { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.btn-danger-solid { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 </style>

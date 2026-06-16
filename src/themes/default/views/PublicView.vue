@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <main class="public-container" style="max-width: 1440px; width: 100%; margin: 0 auto; padding: 0; flex: 1;">
+      <main class="public-container" style="max-width: 1440px; width: 100%; margin: 0 auto; padding: 0; flex: 1; display: flex; flex-direction: column; gap: 16px;">
         <div v-if="processedServers.length === 0" class="empty-state" style="text-align: center; padding: 60px;">
           暂无公开展示的节点或正在加载...
         </div>
