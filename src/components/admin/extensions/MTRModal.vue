@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import request from '@/utils/request.js'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useServerStore } from '@/store/server.js'
@@ -98,12 +98,25 @@ const targetOptions = ref([])
 let pollInterval = null
 
 // 核心拦截逻辑：过滤出既"在线"又"已安装该插件"的服务器
+const currentUnixTime = ref(Date.now() / 1000)
+let timeInterval = null
+
+onMounted(() => {
+  timeInterval = setInterval(() => {
+    currentUnixTime.value = Date.now() / 1000
+  }, 5000)
+})
+
+onUnmounted(() => {
+  if (timeInterval) clearInterval(timeInterval)
+})
+
+// 核心拦截逻辑：过滤出既"在线"又"已安装该插件"的服务器
 const onlineServers = computed(() => {
-  const now = Date.now() / 1000
   const installedSet = new Set(props.installedNodes)
   
   return serverStore.servers.filter(s => {
-    const isOnline = (now - s.last_active < 180)
+    const isOnline = (currentUnixTime.value - s.last_active < 180)
     const isInstalled = installedSet.has(s.node_id)
     return isOnline && isInstalled
   })
@@ -180,29 +193,33 @@ const startPolling = (target) => {
   
   pollInterval = setInterval(async () => {
     try {
-  const res = await request.get('/api/admin/mtr/result', {
-    params: { node_id: form.value.node_id, target: target }
-  })
-  
-  if (res && res.status === 'success' && res.data) {
-    // 优先拦截并处理探针或插件显式回传的错误，阻止轮询无休止挂起
-    if (res.data.error) {
-      statusText.value = `诊断失败: ${res.data.error}`
-      isRunning.value = false
-      clearInterval(pollInterval)
-      return
-    }
+      // 1. 强制追加 _t 时间戳，击穿浏览器 GET 缓存，确保每次都向服务端拉取真实状态
+      const res = await request.get('/api/admin/mtr/result', {
+        params: { node_id: form.value.node_id, target: target, _t: Date.now() }
+      })
+      
+      // 2. 兼容 Axios 原始响应与拦截器提取后的响应层级
+      const payload = res.data && res.data.status ? res.data : res
 
-    // 解析正常的跳数路由数据
-    if (Array.isArray(res.data.hops)) {
-      resultData.value = res.data.hops
-      lastUpdateTime.value = new Date(res.timestamp * 1000).toLocaleString()
-      statusText.value = '' 
-      isRunning.value = false
-      clearInterval(pollInterval)
-    }
-  }
-} catch (err) {
+      if (payload && payload.status === 'success' && payload.data) {
+        // 优先拦截并处理探针或插件显式回传的错误，阻止轮询无休止挂起
+        if (payload.data.error) {
+          statusText.value = `诊断失败: ${payload.data.error}`
+          isRunning.value = false
+          clearInterval(pollInterval)
+          return
+        }
+
+        // 解析正常的跳数路由数据
+        if (Array.isArray(payload.data.hops)) {
+          resultData.value = payload.data.hops
+          lastUpdateTime.value = new Date(payload.timestamp * 1000).toLocaleString()
+          statusText.value = '' 
+          isRunning.value = false
+          clearInterval(pollInterval)
+        }
+      }
+    } catch (err) {
       clearInterval(pollInterval)
       isRunning.value = false
       statusText.value = '获取结果异常或超时中断。'

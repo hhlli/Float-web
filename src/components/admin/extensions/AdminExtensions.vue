@@ -217,11 +217,41 @@ onMounted(() => {
 .action-btn-icon svg { width: 14px; height: 14px; }
 .action-btn-icon.play { color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
 
-.node-list-container { max-height: 300px; overflow-y: auto; padding: 10px 0; }
-.empty-text { text-align: center; color: var(--text-muted); font-size: 13px; }
-.node-checkbox-item { margin-bottom: 12px; }
-.checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--text-main); }
-.node-status { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: rgba(100, 116, 139, 0.1); color: #64748b; }
+.node-list-container { 
+  max-height: 300px; 
+  overflow-y: auto; 
+  padding: 10px 0; 
+  display: flex; 
+  flex-wrap: wrap;
+  gap: 16px 24px;
+}
+.empty-text { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0; width: 100%; }
+.node-checkbox-item { margin: 0; }
+.checkbox-label { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  cursor: pointer; 
+  font-size: 14px; 
+  color: var(--text-main); 
+}
+.checkbox-label input[type="checkbox"] { 
+  width: 16px !important; 
+  height: 16px !important; 
+  margin: 0; 
+  padding: 0;
+  flex-shrink: 0; 
+  cursor: pointer;
+  accent-color: var(--primary-color, #3b82f6);
+}
+.node-name { 
+  font-weight: 500;
+  white-space: nowrap;
+}
+.node-status { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: rgba(100, 116, 139, 0.1); color: #64748b; flex-shrink: 0; }
 .node-status.online { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.btn-danger-solid { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.btn-danger-solid { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s; }
+.btn-danger-solid:hover { background: #dc2626; }
+.btn-danger-solid:disabled { background: #fca5a5; cursor: not-allowed; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

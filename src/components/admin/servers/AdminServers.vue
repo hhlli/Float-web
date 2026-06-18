@@ -80,6 +80,10 @@
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
 
+                    <button class="action-btn" title="卸载探针" @click="openUninstallModal(s)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </button>
+
                     <button class="action-btn" title="编辑节点" @click="openEditModal(s)">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
@@ -180,6 +184,8 @@
     </BaseModal>
 
     <DeployModal :show="showDeployModal" :serverData="selectedServer" @close="showDeployModal = false" />
+
+    <UninstallModal :show="showUninstallModal" :serverData="selectedUninstallServer" @close="showUninstallModal = false" />
     
     <EditServerModal 
       :show="showEditModal" 
@@ -206,6 +212,7 @@ import { showToast } from '@/utils/toast.js'
 import BaseModal from '@/components/common/BaseModal.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import DeployModal from './DeployModal.vue'
+import UninstallModal from './UninstallModal.vue' // 新增引入
 import EditServerModal from './EditServerModal.vue'
 import TerminalModal from './TerminalModal.vue' 
 
@@ -249,6 +256,8 @@ const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showDeployModal = ref(false)
 const showDeleteModal = ref(false)
+const showUninstallModal = ref(false)
+const selectedUninstallServer = ref(null)
 const selectedServer = ref(null)
 const nodeToDelete = ref(null)
 
@@ -365,6 +374,10 @@ const toggleVisibility = async (s) => {
 const openDeployModal = (s) => { 
   selectedServer.value = { ...s }; 
   showDeployModal.value = true 
+}
+const openUninstallModal = (s) => {
+  selectedUninstallServer.value = { ...s };
+  showUninstallModal.value = true
 }
 </script>
 
