@@ -81,6 +81,12 @@ const router = createRouter({
           meta: { title: '拓展管理' }
         },
         {
+          path: 'mtr-workspace',
+          name: 'MTRWorkspace',
+          component: () => import('../components/admin/extensions/MTRWorkspace.vue'),
+          meta: { title: 'MTR 路由诊断' }
+        },
+        {
           path: 'theme', 
           name: 'AdminTheme',
           component: () => import('../components/admin/AdminTheme.vue'),

@@ -64,12 +64,6 @@
       </div>
     </div>
 
-    <MTRModal 
-      :show="showMtrModal" 
-      :installed-nodes="currentMtrNodes" 
-      @close="showMtrModal = false" 
-    />
-
     <BaseModal :show="showNodeModal" :title="nodeModalTitle" @close="showNodeModal = false">
       <div class="node-list-container">
         <div v-if="filteredServers.length === 0" class="empty-text">
@@ -104,15 +98,13 @@ import { ref, computed, onMounted } from 'vue'
 import request from '@/utils/request.js'
 import { showToast } from '@/utils/toast.js'
 import BaseModal from '@/components/common/BaseModal.vue'
-import MTRModal from './MTRModal.vue'
 import { useServerStore } from '@/store/server.js'
+import { useRouter } from 'vue-router'
 
 const serverStore = useServerStore()
 
 const extensions = ref([])
-const showMtrModal = ref(false)
-const currentMtrNodes = ref([])
-
+const router = useRouter()
 const showNodeModal = ref(false)
 const actionType = ref('install')
 const targetExtension = ref(null)
@@ -150,8 +142,10 @@ const loadExtensions = async () => {
 }
 
 const openMtrModal = (installedNodes) => {
-  currentMtrNodes.value = installedNodes
-  showMtrModal.value = true
+  router.push({
+    path: '/admin/mtr-workspace',
+    query: { nodes: installedNodes.join(',') }
+  })
 }
 
 const openNodeSelectModal = (ext, action) => {
@@ -206,15 +200,49 @@ onMounted(() => {
 .badge.active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 .badge.inactive { background: rgba(100, 116, 139, 0.15); color: #64748b; }
 
-.action-buttons { display: flex; justify-content: flex-end; gap: 8px; }
-.btn-sm { padding: 4px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
+/* 操作列按钮容器：增加 align-items: center 确保纵向居中对齐，并收紧 gap */
+.action-buttons { 
+  display: flex; 
+  justify-content: flex-end; 
+  align-items: center; 
+  gap: 6px; 
+}
+
+/* 文本按钮：设置固定高度并使用 flex 居中文字 */
+.btn-sm { 
+  height: 28px; 
+  padding: 0 12px; 
+  font-size: 12px; 
+  cursor: pointer; 
+  border-radius: 4px; 
+  transition: background 0.2s; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .btn-outline { background: transparent; }
 .btn-action { color: #3b82f6; border: 1px solid #3b82f6; }
 .btn-action:hover { background: rgba(59, 130, 246, 0.1); }
 .btn-danger { color: #ef4444; border: 1px solid #ef4444; }
 .btn-danger:hover { background: rgba(239, 68, 68, 0.1); }
-.action-btn-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: none; background: transparent; border-radius: 4px; cursor: pointer; padding: 4px; }
-.action-btn-icon svg { width: 14px; height: 14px; }
+
+/* 图标按钮：设置宽高一致 (28x28)，对齐全局操作图标标准 */
+.action-btn-icon { 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  width: 28px; 
+  height: 28px; 
+  background: transparent; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.action-btn-icon svg { width: 15px; height: 15px; }
 .action-btn-icon.play { color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
 
 .node-list-container { 

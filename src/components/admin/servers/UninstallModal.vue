@@ -28,12 +28,31 @@
               </div>
             </div>
 
-            <div class="action-row" style="justify-content: space-between; margin-top: 24px; display: flex;">
-              <button class="btn-outline" @click="$emit('close')">关闭</button>
-              <button class="btn-primary" @click="copyCommand">
-                {{ copySuccess ? '已复制 !' : '复制卸载命令' }}
-              </button>
-            </div>
+            <div class="action-row" style="margin-top: 24px;">
+  <div v-if="!isConfirmingDelete" style="display: flex; justify-content: space-between; width: 100%;">
+    <button class="btn-outline" @click="$emit('close')">取消</button>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn-danger-solid" style="background-color: var(--danger-color, #dc2626); color: #fff; border: none; border-radius: 6px; padding: 0 16px; cursor: pointer; font-size: 14px;" @click="isConfirmingDelete = true">
+        仅从列表删除
+      </button>
+      <button class="btn-primary" @click="copyCommand">
+        {{ copySuccess ? '已复制 !' : '复制卸载命令' }}
+      </button>
+    </div>
+  </div>
+
+  <div v-else style="display: flex; flex-direction: column; width: 100%; background: #fef2f2; border: 1px solid #f87171; border-radius: 6px; padding: 12px;">
+    <p style="margin: 0 0 12px 0; color: #dc2626; font-size: 14px; font-weight: 500;">
+      确定要删除节点 <strong>{{ serverData?.name }}</strong> 吗？此操作不可撤销。
+    </p>
+    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+      <button class="btn-outline" style="border-color: #fca5a5; color: #dc2626;" @click="isConfirmingDelete = false">暂不删除</button>
+      <button class="btn-danger-solid" style="background-color: #dc2626; color: #fff; border: none; border-radius: 6px; padding: 0 16px; cursor: pointer; font-size: 14px;" @click="executeDelete">
+        确认删除记录
+      </button>
+    </div>
+  </div>
+</div>
 
           </div>
         </div>
@@ -45,8 +64,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { showToast } from '@/utils/toast.js'
+import request from '@/utils/request.js' 
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'refresh'])
 
 const props = defineProps({
   show: Boolean,
@@ -55,9 +75,13 @@ const props = defineProps({
 
 const copySuccess = ref(false)
 const os = ref('linux')
+const isConfirmingDelete = ref(false)
 
 watch(() => props.show, (newVal) => {
-  if (newVal) os.value = 'linux'
+  if (newVal) {
+    os.value = 'linux'
+    isConfirmingDelete.value = false // 每次打开弹窗重置确认状态
+  }
 })
 
 const step1Text = computed(() => {
@@ -97,6 +121,25 @@ const copyCommand = async () => {
     showToast("复制失败，请手动选择代码复制", "error")
   }
 }
+
+const executeDelete = async () => { 
+  if (!props.serverData || !props.serverData.node_id) {
+    showToast('无效的节点数据', 'error')
+    return
+  }
+  
+  try {
+    await request.delete('/api/admin/servers/delete', { 
+      params: { node_id: props.serverData.node_id } 
+    })
+    showToast('删除成功')
+    emit('refresh') 
+  } catch (err) {
+    showToast('删除失败', 'error')
+    console.error("删除失败:", err)
+  }
+}
+
 </script>
 
 <style scoped>

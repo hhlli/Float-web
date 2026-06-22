@@ -30,11 +30,11 @@
               </tr>
               <tr v-for="s in serverStore.servers" :key="s.node_id">
                 <td style="font-weight: 500; vertical-align: middle;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 80%; padding-right: 10px;">
-                    <span @click="openDetailModal(s)" style="cursor: pointer; color: var(--primary-color); word-break: break-all;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 10px;">
+                    <span @click="openDetailModal(s)" style="cursor: pointer; color: var(--primary-color); white-space: nowrap;">
                       {{ s.name }}
                     </span>
-                    <div style="position: relative; display: flex; align-items: center;">
+                    <div style="position: relative; display: flex; align-items: center; flex-shrink: 0; margin-left: 16px;">
                       <StatusBadge :online="isOnline(s.last_active)" style="flex-shrink: 0;" />
                       <svg v-if="s.is_hidden" title="已隐藏" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 100%; margin-left: 10px; width: 16px; height: 16px; color: var(--text-muted);">
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
@@ -80,10 +80,6 @@
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
 
-                    <button class="action-btn" title="卸载探针" @click="openUninstallModal(s)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    </button>
-
                     <button class="action-btn" title="编辑节点" @click="openEditModal(s)">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
@@ -102,7 +98,7 @@
                       <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
 
-                    <button class="action-btn danger" title="删除节点" @click="confirmDeleteServer(s.node_id)">
+                    <button class="action-btn danger" title="删除节点" @click="openUninstallModal(s)">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                     </button>
                   </div>
@@ -136,19 +132,6 @@
       </template>
     </BaseModal>
 
-    <BaseModal :show="showDeleteModal" title="确认删除节点" @close="showDeleteModal = false">
-      <div style="text-align: center; padding: 10px 0;">
-        <div class="warning-icon-wrapper">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="warning-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <p style="margin-top: 16px; color: var(--text-main);">确定要删除节点 <strong>{{ nodeToDelete }}</strong> 吗？</p>
-        <p style="color: var(--text-muted); font-size: 13px;">此操作不可撤销，关联的监测数据将同步清除。</p>
-      </div>
-      <template #footer>
-        <button class="btn-outline" @click="showDeleteModal = false">取消</button>
-        <button class="btn-danger-solid" @click="executeDelete">确认删除</button>
-      </template>
-    </BaseModal>
 
     <BaseModal :show="showDetailModal" :title="`节点详情: ${detailData.name}`" @close="showDetailModal = false">
       <div class="detail-container">
@@ -185,7 +168,12 @@
 
     <DeployModal :show="showDeployModal" :serverData="selectedServer" @close="showDeployModal = false" />
 
-    <UninstallModal :show="showUninstallModal" :serverData="selectedUninstallServer" @close="showUninstallModal = false" />
+    <UninstallModal 
+      :show="showUninstallModal" 
+      :serverData="selectedServer" 
+      @close="showUninstallModal = false"
+      @refresh="handleDeleteSuccess"
+    />
     
     <EditServerModal 
       :show="showEditModal" 
@@ -255,11 +243,8 @@ const openTerminal = (server) => {
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showDeployModal = ref(false)
-const showDeleteModal = ref(false)
 const showUninstallModal = ref(false)
-const selectedUninstallServer = ref(null)
 const selectedServer = ref(null)
-const nodeToDelete = ref(null)
 
 const newNode = ref({ name: '', group: '', tags: '' })
 
@@ -307,11 +292,6 @@ const handleEditSuccess = async () => {
   showToast('保存成功');
 }
 
-const confirmDeleteServer = (id) => { 
-  nodeToDelete.value = id; 
-  showDeleteModal.value = true 
-}
-
 const submitAddNode = async () => {
   const finalName = (newNode.value.name || '').trim() || generateShortName();
   
@@ -336,18 +316,6 @@ const submitAddNode = async () => {
   } catch (err) {
     showToast('添加失败', 'error');
     console.error("保存请求失败:", err);
-  }
-}
-
-const executeDelete = async () => { 
-  try {
-    await request.delete('/api/admin/servers/delete', { params: { node_id: nodeToDelete.value } });
-    showToast('删除成功');
-    showDeleteModal.value = false; 
-    await serverStore.fetchStaticServers(true); 
-  } catch (err) {
-    showToast('删除失败', 'error');
-    console.error("删除失败:", err);
   }
 }
 
@@ -376,8 +344,13 @@ const openDeployModal = (s) => {
   showDeployModal.value = true 
 }
 const openUninstallModal = (s) => {
-  selectedUninstallServer.value = { ...s };
-  showUninstallModal.value = true
+  selectedServer.value = { ...s };
+  showUninstallModal.value = true;
+}
+
+const handleDeleteSuccess = async () => {
+  showUninstallModal.value = false;
+  await serverStore.fetchStaticServers(true);
 }
 </script>
 
