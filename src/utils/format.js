@@ -100,9 +100,10 @@ export const formatBytes = (bytes) => {
    */
   export function getProgressColor(percent) {
     const value = Number(percent) || 0;
-    if (value >= 90) return '#ef4444'; // 高负载：固定红色
-    if (value >= 70) return '#f59e0b'; // 中负载：固定橙色
-    return '#10b981';                  // 低负载：固定绿色
+    if (value >= 90) return '#ef4444'; // 极高负载：红色
+    if (value >= 70) return '#f97316'; // 高负载：深橙色 (新增分段)
+    if (value >= 50) return '#f59e0b'; // 中负载：黄橙色
+    return '#10b981';                  // 低负载：绿色
   }
   
   /**

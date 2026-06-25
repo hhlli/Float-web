@@ -81,10 +81,10 @@ const router = createRouter({
           meta: { title: '拓展管理' }
         },
         {
-          path: 'mtr-workspace',
-          name: 'MTRWorkspace',
-          component: () => import('../components/admin/extensions/MTRWorkspace.vue'),
-          meta: { title: 'MTR 路由诊断' }
+          path: 'plugin-workspace',
+          name: 'PluginWorkspace',
+          component: () => import('../components/admin/extensions/PluginContainer.vue'), 
+          meta: { title: '插件工作台' }
         },
         {
           path: 'theme', 

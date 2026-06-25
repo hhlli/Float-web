@@ -37,10 +37,10 @@
                 <td class="col-actions">
                   <div class="action-buttons">
                     <button 
-                      v-if="ext.installed_nodes && ext.installed_nodes.length > 0 && ext.id === 'mtr-plugin'"
+                      v-if="ext.installed_nodes && ext.installed_nodes.length > 0"
                       class="action-btn-icon play" 
-                      title="运行诊断" 
-                      @click="openMtrModal(ext.installed_nodes)"
+                      title="运行插件" 
+                      @click="openPluginWorkspace(ext)"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     </button>
@@ -141,10 +141,13 @@ const loadExtensions = async () => {
   }
 }
 
-const openMtrModal = (installedNodes) => {
+const openPluginWorkspace = (ext) => {
   router.push({
-    path: '/admin/mtr-workspace',
-    query: { nodes: installedNodes.join(',') }
+    path: '/admin/plugin-workspace',
+    query: { 
+      ext_id: ext.id,
+      nodes: ext.installed_nodes.join(',') 
+    }
   })
 }
 

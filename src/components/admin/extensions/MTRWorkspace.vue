@@ -141,6 +141,7 @@ const resultData = ref([])
 const lastUpdateTime = ref('')
 const targetOptions = ref([])
 let pollInterval = null
+let currentTaskId = null
 
 const currentUnixTime = ref(Date.now() / 1000)
 let timeInterval = null
@@ -209,8 +210,8 @@ const fetchHistory = async () => {
     return
   }
   try {
-    const res = await request.get('/api/admin/mtr/history', { 
-      params: { node_id: form.value.node_id } 
+    const res = await request.get('/api/admin/plugin/history', { 
+      params: { node_id: form.value.node_id, ext_id: 'mtr-plugin' } 
     })
     historyData.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (e) {
@@ -223,7 +224,8 @@ const viewHistoryRecord = (record) => {
   if (record.result_data && record.result_data.hops) {
     resultData.value = record.result_data.hops
     lastUpdateTime.value = formatTime(record.timestamp) + ' (历史快照)'
-    form.value.target_manual = record.target
+    // 根据泛化前留存的历史数据结构兼容提取 target
+    form.value.target_manual = record.result_data.target || '历史数据'
     form.value.target_select = ''
     statusText.value = '正在查看历史诊断快照'
   }
@@ -262,25 +264,31 @@ const startDiagnostics = async () => {
   resultData.value = []
   
   try {
-    await request.post('/api/admin/mtr/run', { node_id: form.value.node_id, target: target })
+    const res = await request.post('/api/admin/plugin/execute', { 
+      node_id: form.value.node_id, 
+      ext_id: 'mtr-plugin',
+      args: ['-target', target]
+    })
+    const payload = res.data || res
+    currentTaskId = payload.task_id
     statusText.value = '路由追踪执行中，通常耗时 10~30 秒，请稍候...'
-    startPolling(target)
+    startPolling() // 移除 target 参数
   } catch (err) {
     statusText.value = '指令下发失败，目标探针可能离线。'
     isRunning.value = false
   }
 }
 
-const startPolling = (target) => {
+const startPolling = () => {
   if (pollInterval) clearInterval(pollInterval)
   
   pollInterval = setInterval(async () => {
     try {
-      const res = await request.get('/api/admin/mtr/result', {
-        params: { node_id: form.value.node_id, target: target, _t: Date.now() }
+      const res = await request.get('/api/admin/plugin/result', {
+        params: { node_id: form.value.node_id, ext_id: 'mtr-plugin', task_id: currentTaskId, _t: Date.now() }
       })
       
-      const payload = res.data && res.data.status ? res.data : res
+      const payload = res.data?.status ? res.data : res
 
       if (payload && payload.status === 'success' && payload.data) {
         if (payload.data.error) {
